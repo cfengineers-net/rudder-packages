@@ -1,0 +1,19 @@
+#!/bin/bash
+#=================================================
+# Post Uninstallation
+#=================================================
+
+function pidof {
+  # Yeah, "grep -v grep" is ugly, but we can't use the [u]nique trick on a variable
+  ps -A | grep "$1" | grep -v grep | awk '{print $1}';
+}
+
+# Do it only during uninstallation
+for component in cf-agent cf-serverd cf-execd cf-monitord; do
+	if pid=`pidof ${component}`; then
+		if [ "x${pid}" != "x" ]; then
+			kill -9 ${pid}
+		fi
+	fi
+done
+

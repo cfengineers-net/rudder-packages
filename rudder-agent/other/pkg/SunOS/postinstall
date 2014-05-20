@@ -1,0 +1,105 @@
+#!/bin/bash
+#=================================================
+# Post Installation
+#=================================================
+
+CFRUDDER_FIRST_INSTALL=0
+
+echo "Making sure that the permissions on the CFEngine key directory are correct..."
+if [ -d /var/rudder/cfengine-community/ppkeys ]; then
+chmod 700 /var/rudder/cfengine-community/ppkeys
+  if [ `ls /var/rudder/cfengine-community/ppkeys | wc -l` -gt 0 ]; then
+    chmod 600 /var/rudder/cfengine-community/ppkeys/*
+  fi
+fi
+
+# Always do this
+
+# Generate a UUID if we don't have one yet
+if [ ! -e /opt/rudder/etc/uuid.hive ]
+then
+	uuidgen > /opt/rudder/etc/uuid.hive
+else
+	# UUID is valid only if it has been generetaed by uuidgen or if it is set to 'root' for policy server
+	CHECK_UUID=`cat /opt/rudder/etc/uuid.hive | grep -E "^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}|root" | wc -l`
+	# If the UUID is not valid, regenerate it
+	if [ ${CHECK_UUID} -ne 1 ]
+	then
+		uuidgen > /opt/rudder/etc/uuid.hive
+	fi
+fi
+
+# Copy new binaries to workdir, make sure daemons are stopped first
+
+# Set a "lock" to avoid CFEngine being restarted during the upgrade process
+I_SET_THE_LOCK=0
+if [ ! -e /opt/rudder/etc/disable-agent ]; then
+	I_SET_THE_LOCK=1
+	touch /opt/rudder/etc/disable-agent
+fi
+
+# Copy CFEngine binaries
+cp -rp /opt/rudder/bin/cf-* /var/rudder/cfengine-community/bin/
+NB_COPIED_BINARIES=`ls -1 /var/rudder/cfengine-community/bin/ | wc -l`
+
+if [ ${NB_COPIED_BINARIES} -gt 0 ];then echo "CFEngine binaries copied to workdir"; fi
+
+# Copy initial promises if there aren't any already
+if [ ! -e /var/rudder/cfengine-community/inputs/promises.cf ]
+then
+	cp -r /opt/rudder/share/initial-promises/* /var/rudder/cfengine-community/inputs
+fi
+
+# If the cf-promises validation fails, it means we have a broken set of promises (possibly a pre-2.8 set).
+# Reset the initial promises so the server is able to send the agent a new set of correct ones.
+RUDDER_UUID=`cat /opt/rudder/etc/uuid.hive 2>/dev/null || true`
+if ! /var/rudder/cfengine-community/bin/cf-promises >/dev/null 2>&1 && [ "z${RUDDER_UUID}" != "zroot" ]
+then
+	rm -rf /var/rudder/cfengine-community/inputs/*
+	cp -rp /opt/rudder/share/initial-promises/* /var/rudder/cfengine-community/inputs/
+fi
+
+# Remove the lock on CFEngine
+if [ ${I_SET_THE_LOCK} -eq 1 ]; then
+	rm -f /opt/rudder/etc/disable-agent
+fi
+
+# Restart daemons if we stopped them, otherwise not
+if [ ${CFRUDDER_FIRST_INSTALL} -ne 1 ]
+then
+	# Check if agent is disabled
+	if [ ! -f /opt/rudder/etc/disable-agent ]
+	then
+		if [ -r /var/rudder/cfengine-community/inputs/failsafe.cf -o -r /var/rudder/cfengine-community/inputs/promises.cf ]
+		then
+			/sbin/service rudder-agent start
+		fi
+	else
+		echo "********************************************************************************"
+		echo "rudder-agent has been updated, but was not started as it is disabled."
+		echo "To enable rudder agent, you have to remove disable file, and start rudder-agent:"
+		echo "# rm -f /opt/rudder/etc/disable-agent"
+		echo "# /sbin/service rudder-agent start"
+		echo "********************************************************************************"
+	fi
+else
+	echo "********************************************************************************"
+	echo "rudder-agent has been installed (not started). This host can be a Rudder node."
+	echo "To get started, configure your Rudder server's hostname and launch the agent:"
+	echo "# echo 'rudder.server' > /var/rudder/cfengine-community/policy_server.dat"
+	echo "# service rudder-agent start"
+	echo "This node will then appear in the Rudder web interface under 'Accept new nodes'."
+	echo "********************************************************************************"
+fi
+
+# Create a key if we don't have one yet
+if [ ! -f /var/rudder/cfengine-community/ppkeys/localhost.priv ]
+then
+	echo "INFO: Creating keys for CFEngine agent..."
+	/var/rudder/cfengine-community/bin/cf-key > /dev/null 2>&1
+	echo "INFO: Created a new key for CFEngine agent in /var/rudder/cfengine-community/ppkeys/"
+fi
+
+# launch rudder agent check script, it will generate an UUID on first install or repair it if needed
+/opt/rudder/bin/check-rudder-agent
+
