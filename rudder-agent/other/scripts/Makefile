@@ -29,9 +29,9 @@ BZIP2_RELEASE = 1.0.6
 BUILD_DIR = ../build
 TMP_DIR := $(shell mktemp -dq /tmp/rudder.XXXXXX)
 WGET := $(if $(PROXY), http_proxy=$(PROXY) ftp_proxy=$(PROXY)) /usr/sfw/bin/wget -q
-PATCH := /usr/bin/gpatch
-FIND := /opt/csw/bin/gfind
-TAR := /opt/csw/bin/gtar
+PATCH = /usr/bin/gpatch
+FIND = /opt/csw/bin/gfind
+TAR = /opt/csw/bin/gtar
 
 localdepends: $(BUILD_DIR) $(BUILD_DIR)/initial-promises $(BUILD_DIR)/files $(BUILD_DIR)/fusioninventory-agent $(BUILD_DIR)/zlib-source $(BUILD_DIR)/bzip2-source $(BUILD_DIR)/tokyocabinet-source $(BUILD_DIR)/pcre-source $(BUILD_DIR)/openssl-source $(BUILD_DIR)/cfengine-source $(BUILD_DIR)/rudder-agent.cron 
 	rm -rf $(TMP_DIR)
@@ -95,6 +95,7 @@ $(BUILD_DIR)/initial-promises: $(BUILD_DIR)/rudder-sources
 
 $(BUILD_DIR)/fusioninventory-agent:
 	#Original URL: http://search.cpan.org/CPAN/authors/id/G/GR/GROUSSE/FusionInventory-Agent-$(FUSION_RELEASE).tar.gz
+	#$(WGET) -O $(TMP_DIR)/fusion.tgz http://cpan.metacpan.org/authors/id/G/GR/GROUSSE/FusionInventory-Agent-$(FUSION_RELEASE).tar.gz
 	$(WGET) -O $(TMP_DIR)/fusion.tgz http://www.normation.com/tarball/FusionInventory-Agent-$(FUSION_RELEASE).tar.gz
 	$(TAR) zxf $(TMP_DIR)/fusion.tgz -C $(TMP_DIR)
 	mv $(TMP_DIR)/FusionInventory-Agent-$(FUSION_RELEASE) $(BUILD_DIR)/fusioninventory-agent

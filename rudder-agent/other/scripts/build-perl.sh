@@ -122,9 +122,9 @@ function build_fusion_agent() {
 	gcp -a lib/FusionInventory $PREFIX/lib/perl5/
 }
 
-#build_prepare
-#build_libgcc
-#build_perl
+build_prepare
+build_libgcc
+build_perl
 build_ssl_eay
 build_modules
 
