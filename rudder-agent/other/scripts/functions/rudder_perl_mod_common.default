@@ -1,0 +1,33 @@
+function installMod () {
+    modName=$1
+    distName=$2
+    args=$3
+
+    if [ -z "$distName" ]; then
+        distName=`echo $modName|sed 's,::,-,g'`
+    fi
+    archive=`ls $BUILDDIR/files/$distName*.tar.gz`
+    $PREFIX/bin/perl $CPANM -l $PREFIX --skip-installed $archive $args
+    $PREFIX/bin/perl -I $PREFIX/lib/perl5 -M$modName -e1
+}
+
+function build_rudder_perl_mod_common() {
+
+	cd $BUILDDIR
+	archive=`ls $BUILDDIR/files/App-cpanminus-*.tar.gz`
+	echo $archive
+	gunzip < $archive | tar xf -
+	CPANM=$BUILDDIR/App-cpanminus-1.0004/bin/cpanm
+
+	installMod "URI"
+	installMod "HTML::Tagset"
+	installMod "HTML::Parser"
+	installMod "LWP" "libwww-perl"
+	installMod "Compress::Raw::Bzip2"
+	installMod "Compress::Raw::Zlib"
+	installMod "Compress::Raw::Zlib" "IO-Compress"
+
+	for modName in $MODULES; do
+		installMod $modName
+	done
+}

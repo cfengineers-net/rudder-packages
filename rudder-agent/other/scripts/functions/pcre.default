@@ -1,0 +1,6 @@
+function build_pcre() {
+	cd $BUILDDIR/pcre-source
+	./configure --prefix=$PREFIX --enable-shared --disable-static --disable-cpp --enable-unicode-properties
+	$MAKE
+	$MAKE install
+}

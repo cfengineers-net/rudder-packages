@@ -1,0 +1,10 @@
+function build_rudder_fusion_inventory() {
+	cd $BUILDDIR/fusioninventory-agent
+
+	mkdir -p $PREFIX/share/fusion-utils && $CP -a share/* $PREFIX/share/fusion-utils
+
+	PERL_MM_USE_DEFAULT=1 $PREFIX/bin/perl Makefile.PL --default PREFIX=$PREFIX
+	$MAKE install
+
+	$CP -a lib/FusionInventory $PREFIX/lib/perl5/
+}

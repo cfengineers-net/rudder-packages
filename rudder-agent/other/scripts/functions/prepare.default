@@ -1,0 +1,3 @@
+function build_prepare() {
+	mkdir -p $PREFIX/lib $PREFIX/include	
+}

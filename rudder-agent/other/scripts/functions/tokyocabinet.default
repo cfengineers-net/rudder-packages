@@ -1,0 +1,6 @@
+function build_tokyocabinet() {
+	cd $BUILDDIR/tokyocabinet-source
+	./configure --enable-shared --prefix=$PREFIX --disable-static --with-zlib=$PREFIX --with-bzip=$PREFIX
+	$MAKE
+	$MAKE install
+}

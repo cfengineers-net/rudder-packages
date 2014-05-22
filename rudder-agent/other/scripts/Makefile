@@ -80,7 +80,7 @@ $(BUILD_DIR)/bzip2-source:
 	$(WGET) -O $(TMP_DIR)/bzip2.tgz http://www.bzip.org/1.0.6/bzip2-$(BZIP2_RELEASE).tar.gz
 	$(TAR) xzf $(TMP_DIR)/bzip2.tgz -C $(TMP_DIR)
 	mv $(TMP_DIR)/bzip2-$(BZIP2_RELEASE) $(BUILD_DIR)/bzip2-source
-	$(PATCH) -d $(BUILD_DIR)/bzip2-source -p1 < ../patches/bzip2/0001-makefile-wrong-opts-for-solaris-ld.patch
+#	$(PATCH) -d $(BUILD_DIR)/bzip2-source -p1 < ../patches/bzip2/0001-makefile-wrong-opts-for-solaris-ld.patch
 
 $(BUILD_DIR)/rudder-sources.tar.bz2:
 	$(WGET) -O $(BUILD_DIR)/rudder-sources.tar.bz2 http://www.rudder-project.org/archives/rudder-sources-${RUDDER_VERSION_TO_PACKAGE}.tar.bz2

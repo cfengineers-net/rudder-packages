@@ -1,0 +1,8 @@
+function build_bzlib2() {
+	cd $BUILDDIR/bzip2-source
+	$MAKE -f Makefile-libbz2_so
+	ln -s libbz2.so.1.0.6 libbz2.so.1
+	ln -s libbz2.so.1.0.6 libbz2.so
+	$CP -a libbz2.so* $PREFIX/lib
+	$CP -a *.h $PREFIX/include	
+}

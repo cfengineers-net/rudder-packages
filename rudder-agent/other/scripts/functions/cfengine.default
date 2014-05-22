@@ -1,0 +1,8 @@
+function build_cfengine() {
+	cd $BUILDDIR/cfengine-source
+	./configure --prefix=$PREFIX --with-tokyocabinet=$PREFIX --with-openssl=$PREFIX \
+		--with-pcre=$PREFIX --with-workdir=$CFE_WORKDIR --without-postgresql \
+		--without-libxml2 --without-mysql --without-libxml2
+	$MAKE
+	$MAKE install
+}

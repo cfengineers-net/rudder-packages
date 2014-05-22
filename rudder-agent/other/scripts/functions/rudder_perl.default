@@ -1,0 +1,11 @@
+build_rudder_perl () {
+	cd $BUILDDIR
+	gunzip < $BUILDDIR/files/perl-$PERL_VERSION.tar.gz | tar xf -
+	cd perl-$PERL_VERSION
+    
+	./Configure -Dnoextensions=ODBM_File -Duserelocatableinc -Dusethreads -des -Dcc="gcc" -Dinstallprefix=$PREFIX -Dsiteprefix=$PREFIX \
+		-Dprefix=$PREFIX -Dlddlflags="-G -fstack-protector -L$PREFIX/lib -R$PREFIX/lib" -Dldflags="-fstack-protector -L$PREFIX/lib -R$PREFIX/lib" \
+		-Dcldflags="-L$PREFIX/lib -R$PREFIX/lib -fstack-protector"
+	$MAKE
+	$MAKE install 
+}

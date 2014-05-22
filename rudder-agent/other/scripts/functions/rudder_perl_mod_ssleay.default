@@ -1,0 +1,11 @@
+function build_rudder_perl_mod_ssleay() {
+	cd $BUILDDIR
+	gunzip < $BUILDDIR/files/Crypt-SSLeay-0.57.tar.gz | tar xvf -
+	cd Crypt-SSLeay-0.57
+	PERL_MM_USE_DEFAULT=1 $PREFIX/bin/perl Makefile.PL --default INSTALL_BASE=$PREFIX \
+		LDFLAGS="-fstack-protector -L/$PREFIX/lib -$PREFIX/lib" \
+		LDDLFLAGS="-G -fstack-protector -L$PREFIX/lib -R$PREFIX/lib" \
+		CCFLAGS="-D_REENTRANT -fno-strict-aliasing -pipe -fstack-protector -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -DPERL_USE_SAFE_PUTENV -I$PREFIX/include" \
+		--lib $PREFIX/lib
+	$MAKE install
+}

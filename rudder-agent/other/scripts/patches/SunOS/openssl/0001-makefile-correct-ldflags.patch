@@ -1,0 +1,11 @@
+--- Makefile	Mon May 19 08:58:13 2014
++++ Makefile	Mon May 19 09:17:46 2014
+@@ -176,7 +176,7 @@
+ SHARED_SSL=libssl$(SHLIB_EXT)
+ SHARED_LIBS=$(SHARED_CRYPTO) $(SHARED_SSL)
+ SHARED_LIBS_LINK_EXTS=.so.$(SHLIB_MAJOR) .so
+-SHARED_LDFLAGS=-shared
++SHARED_LDFLAGS=-shared $(LDFLAGS)
+ 
+ GENERAL=        Makefile
+ BASENAME=       openssl

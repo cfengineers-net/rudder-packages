@@ -1,0 +1,4 @@
+function build_rudder_extra() {
+	$CP -a /opt/csw/lib/libssp.so* $PREFIX/lib
+	chrpath -r $PREFIX/lib $PREFIX/lib/libssp.so.0.0.0
+}

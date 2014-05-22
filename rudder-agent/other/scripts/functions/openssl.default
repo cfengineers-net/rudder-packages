@@ -1,0 +1,6 @@
+function build_openssl() {
+	cd $BUILDDIR/openssl-source
+	./config shared --prefix=$PREFIX	
+	$MAKE
+	$MAKE install
+}

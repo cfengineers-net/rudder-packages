@@ -1,0 +1,6 @@
+function build_zlib() {
+	cd $BUILDDIR/zlib-source
+	./configure --prefix=$PREFIX
+	$MAKE
+	$MAKE install
+}

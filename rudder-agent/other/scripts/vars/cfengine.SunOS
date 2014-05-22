@@ -1,0 +1,22 @@
+OBJECTS=(
+	"prepare"
+	"zlib"
+	"bzlib2"
+	"pcre"
+	"tokyocabinet"
+	"openssl" 
+	"cfengine"
+)
+
+SCRIPTDIR=$PWD
+BUILDDIR="$PWD/../build"
+
+VARDIR=/var/cfengine
+PREFIX=/var/cfengine
+CFE_WORKDIR=$VARDIR
+
+export AR=/opt/csw/bin/gar
+
+CP=gcp
+MAKE=gmake
+
