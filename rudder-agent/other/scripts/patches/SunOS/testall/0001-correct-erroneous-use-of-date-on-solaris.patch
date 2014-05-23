@@ -1,0 +1,17 @@
+--- /tmp/cfengine-3.5.3/tests/acceptance/testall        Mon Dec  9 13:13:14 2013
++++ testall     Fri May 23 13:57:33 2014
+@@ -88,10 +88,10 @@
+ # Obtain UNIX time(), using date +%s, Perl, or POSIX-compatible approach.
+ #
+ unix_seconds() {
+-  if [ "$HAVE_DATE_PCT_S" ]; then
+-    date +%s
+-    return 0
+-  fi
++#  if [ "$HAVE_DATE_PCT_S" ]; then
++#    date +%s
++#    return 0
++#  fi
+ 
+   if [ "$PERL" ]; then
+     $PERL -e 'print time() . "\n"' 2>/dev/null

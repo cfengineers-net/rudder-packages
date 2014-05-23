@@ -1,2 +1,3 @@
 OS=`uname -s`
 ARCH=`uname -p`
+OS_RELEASE=`uname -r`

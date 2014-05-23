@@ -1,7 +1,7 @@
 function build_openssl() {
 	cd $BUILDDIR/openssl-source
 	./config shared --prefix=$PREFIX	
-	gpatch -p0 < $SCRIPTDIR/patches/SunOS/openssl/0001-makefile-correct-ldflags.patch
+	$PATCH -p0 < $SCRIPTDIR/patches/SunOS/openssl/0001-makefile-correct-ldflags.patch
 	$MAKE
 	$MAKE install
 }

@@ -1,0 +1,11 @@
+--- Makefile  2014-01-15 02:12:48.000000000 +0100
++++ Makefile  2014-04-14 16:42:09.531752192 +0200
+@@ -52,7 +52,7 @@
+ 
+ liblmdb.so:  mdb.o midl.o
+ #	$(CC) $(LDFLAGS) -pthread -shared -Wl,-Bsymbolic -o $@ mdb.o midl.o $(SOLIBS)
+-	$(CC) $(LDFLAGS) -pthread -shared -o $@ mdb.o midl.o $(SOLIBS)
++	$(CC) $(LDFLAGS) -pthreads -shared -o $@ mdb.o midl.o $(SOLIBS)
+ 
+ mdb_stat: mdb_stat.o liblmdb.a
+ mdb_copy: mdb_copy.o liblmdb.a

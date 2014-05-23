@@ -1,0 +1,6 @@
+function build_libxml2(){
+	cd $BUILDDIR/libxml2-source
+	./configure --with-zlib=$PREFIX --with-iconv=$PREFIX --prefix=$PREFIX --without-python
+	$MAKE
+	$MAKE install
+}

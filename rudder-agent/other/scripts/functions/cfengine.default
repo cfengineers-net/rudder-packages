@@ -1,8 +1,28 @@
 function build_cfengine() {
 	cd $BUILDDIR/cfengine-source
+	OPTS=""
+
+	if [ -d $PREFIX/include/libxml2 ]; then
+		OPTS="$OPTS --with-libxml2=$PREFIX"
+	else
+		OPTS="$OPTS --without-libxml2"
+	fi
+
+	if [ -d $PREFIX/nothing-here ]; then
+		OPTS="$OPTS --with-mysql=$PREFIX"
+	else
+		OPTS="$OPTS --without-mysql"
+	fi
+
+	if [ -d $PREFIX/nothing-here ]; then
+		OPTS="$OPTS --with-postgresql=$PREFIX"
+	else
+		OPTS="$OPTS --without-postgresql"
+	fi
+
 	./configure --prefix=$PREFIX --with-tokyocabinet=$PREFIX --with-openssl=$PREFIX \
-		--with-pcre=$PREFIX --with-workdir=$CFE_WORKDIR --without-postgresql \
-		--without-libxml2 --without-mysql --without-libxml2
+		--with-pcre=$PREFIX --with-workdir=$CFE_WORKDIR \
+		$OPTS
 	$MAKE
 	$MAKE install
 }

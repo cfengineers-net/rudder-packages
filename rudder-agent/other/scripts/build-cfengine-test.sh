@@ -1,8 +1,10 @@
 #!/bin/bash -e
 
 . $PWD/vars/common
-. $PWD/vars/rudder.$OS
+
+. $PWD/vars/cfengine.3.6.$OS
 . $PWD/vars/exports
+
 . $PWD/functions/common
 
 builder

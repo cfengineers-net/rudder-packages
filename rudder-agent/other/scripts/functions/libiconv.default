@@ -1,0 +1,6 @@
+function build_libiconv(){
+  cd $BUILDDIR/libiconv-source
+  ./configure --prefix=$PREFIX
+  $MAKE
+  $MAKE install  
+}
