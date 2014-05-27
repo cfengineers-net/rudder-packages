@@ -1,0 +1,8 @@
+function package_prepare_bins_perl() {
+
+	ls -1tr $PREFIX/bin | grep -A 100 cf-serverd | \
+		grep -v rpmvercmp | grep -v cf-serverd | while read line; do
+		
+		$CP -a $PREFIX/bin/$line $SPOOL_SRC/$PREFIX/bin		
+	done
+}

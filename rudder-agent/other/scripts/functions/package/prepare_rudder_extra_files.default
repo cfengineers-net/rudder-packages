@@ -1,0 +1,8 @@
+function package_prepare_rudder_extra_files() {
+	
+	if [ -d $SCRIPTDIR/../files/$OS/bin ]; then
+		chmod 755 $SCRIPTDIR/../files/$OS/bin/*
+		$CP -a $SCRIPTDIR/../files/$OS/bin/* $SPOOL_SRC/$PREFIX/bin
+	fi
+		
+}

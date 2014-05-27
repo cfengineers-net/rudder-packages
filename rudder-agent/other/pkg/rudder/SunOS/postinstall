@@ -1,19 +1,25 @@
-#!/bin/bash
-#=================================================
-# Post Installation
-#=================================================
+#!/bin/sh
+
+RUDDERDIR=/opt/rudder
+RUDDERVARDIR=/var/rudder
+export PATH=$RUDDERDIR/bin/:$PATH
+
+
+# Ensure our PATH includes Rudder's bin dir (for uuidgen on AIX in particular)
 
 CFRUDDER_FIRST_INSTALL=0
 
 echo "Making sure that the permissions on the CFEngine key directory are correct..."
-if [ -d /var/rudder/cfengine-community/ppkeys ]; then
-chmod 700 /var/rudder/cfengine-community/ppkeys
-  if [ `ls /var/rudder/cfengine-community/ppkeys | wc -l` -gt 0 ]; then
-    chmod 600 /var/rudder/cfengine-community/ppkeys/*
+if [ -d $RUDDERVARDIR/cfengine-community/ppkeys ]; then
+chmod 700 $RUDDERVARDIR/cfengine-community/ppkeys
+  if [ `ls $RUDDERVARDIR/cfengine-community/ppkeys | wc -l` -gt 0 ]; then
+    chmod 600 $RUDDERVARDIR/cfengine-community/ppkeys/*
   fi
 fi
 
-# Always do this
+# Do this at first install
+if [ $1 -eq 1 ]
+then
 
 # Generate a UUID if we don't have one yet
 if [ ! -e /opt/rudder/etc/uuid.hive ]
@@ -21,7 +27,7 @@ then
 	uuidgen > /opt/rudder/etc/uuid.hive
 else
 	# UUID is valid only if it has been generetaed by uuidgen or if it is set to 'root' for policy server
-	CHECK_UUID=`cat /opt/rudder/etc/uuid.hive | grep -E "^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}|root" | wc -l`
+	CHECK_UUID=`cat /opt/rudder/etc/uuid.hive | /usr/xpg4/bin/grep -E "^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}|root" | wc -l`
 	# If the UUID is not valid, regenerate it
 	if [ ${CHECK_UUID} -ne 1 ]
 	then
@@ -39,9 +45,8 @@ if [ ! -e /opt/rudder/etc/disable-agent ]; then
 fi
 
 # Copy CFEngine binaries
-cp -rp /opt/rudder/bin/cf-* /var/rudder/cfengine-community/bin/
+cp -rp -f /opt/rudder/bin/cf-* /var/rudder/cfengine-community/bin/
 NB_COPIED_BINARIES=`ls -1 /var/rudder/cfengine-community/bin/ | wc -l`
-
 if [ ${NB_COPIED_BINARIES} -gt 0 ];then echo "CFEngine binaries copied to workdir"; fi
 
 # Copy initial promises if there aren't any already
@@ -59,6 +64,9 @@ then
 	cp -rp /opt/rudder/share/initial-promises/* /var/rudder/cfengine-community/inputs/
 fi
 
+# This fix is required for upgrades from 2.6 or earlier. Since we didn't support AIX on those versions,
+# we don't need it. And it breaks on AIX because their "sed" doesn't have a "-i" option. Grrr.
+
 # Remove the lock on CFEngine
 if [ ${I_SET_THE_LOCK} -eq 1 ]; then
 	rm -f /opt/rudder/etc/disable-agent
@@ -72,14 +80,14 @@ then
 	then
 		if [ -r /var/rudder/cfengine-community/inputs/failsafe.cf -o -r /var/rudder/cfengine-community/inputs/promises.cf ]
 		then
-			/sbin/service rudder-agent start
+			/etc/init.d/rudder-agent start
 		fi
 	else
 		echo "********************************************************************************"
 		echo "rudder-agent has been updated, but was not started as it is disabled."
 		echo "To enable rudder agent, you have to remove disable file, and start rudder-agent:"
 		echo "# rm -f /opt/rudder/etc/disable-agent"
-		echo "# /sbin/service rudder-agent start"
+		echo "# /etc/init.d/rudder-agent start"
 		echo "********************************************************************************"
 	fi
 else
@@ -87,7 +95,7 @@ else
 	echo "rudder-agent has been installed (not started). This host can be a Rudder node."
 	echo "To get started, configure your Rudder server's hostname and launch the agent:"
 	echo "# echo 'rudder.server' > /var/rudder/cfengine-community/policy_server.dat"
-	echo "# service rudder-agent start"
+	echo "# /etc/init.d/rudder-agent start"
 	echo "This node will then appear in the Rudder web interface under 'Accept new nodes'."
 	echo "********************************************************************************"
 fi
@@ -103,3 +111,15 @@ fi
 # launch rudder agent check script, it will generate an UUID on first install or repair it if needed
 /opt/rudder/bin/check-rudder-agent
 
+start=/etc/init.d/rudder-agent
+
+if [ -f $start ];then
+        for l in /etc/rc3.d/S97rudder-agent /etc/rc0.d/K05rudder-agent /etc/rc1.d/K05rudder-agent \
+                /etc/rc2.d/K05rudder-agent /etc/rcS.d/K05rudder-agent; do
+                if [ ! -h $l ]; then
+                        /usr/bin/ln -s $start $l
+                fi
+        done
+fi
+
+exit 0

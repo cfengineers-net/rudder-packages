@@ -1,5 +1,20 @@
 #!/bin/sh
 
+#=================================================
+# Pre Uninstallation
+#=================================================
+
+# Do it during upgrade and uninstall
+# Keep a backup copy of uuid.hive
+mkdir -p /var/backups/rudder
+cp -f /opt/rudder/etc/uuid.hive /var/backups/rudder/uuid-$(date +%Y%m%d).hive
+echo "INFO: A back up copy of the /opt/rudder/etc/uuid.hive has been created in /var/backups/rudder"
+
+# Keep a backup copy of CFEngine ppkeys
+cp -rp -f /var/rudder/cfengine-community/ppkeys/ /var/backups/rudder/ppkeys-$(date +%Y%m%d)
+echo "INFO: A back up copy of the /var/rudder/cfengine-community/ppkeys has been created in /var/backups/rudder"
+
+
 if [ -x /usr/bin/zonename ]; then
         for b in cf-execd cf-monitord cf-serverd cf-agent cf-hub; do
                 /usr/bin/pkill -TERM -z `/usr/bin/zonename` $b
@@ -9,7 +24,8 @@ else
                 /usr/bin/pkill -TERM $b
         done
 fi
-/usr/bin/rm -f /etc/rc3.d/S97cfengine3 /etc/rc0.d/K05cfengine3 /etc/rc1.d/K05cfengine3 \
-        /etc/rc2.d/K05cfengine3 /etc/rcS.d/K05cfengine3 
+
+/usr/bin/rm -f /etc/rc3.d/S97rudder-agent /etc/rc0.d/K05rudder-agent /etc/rc1.d/K05rudder-agent \
+        /etc/rc2.d/K05rudder-agent /etc/rcS.d/K05rudder-agent 
 
 exit 0

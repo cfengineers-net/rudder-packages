@@ -1,20 +1,29 @@
 OBJECTS=(
 	"prepare"
 	"zlib"
-	"liblmdb"
-#	"libiconv"
-#	"libxml2"
-#	"pcre"
-#	"tokyocabinet"
-#	"openssl" 
-#	"cfengine"
+	"bzlib2"
+	"libiconv"
+	"libxml2"
+	"pcre"
+	"tokyocabinet"
+	"openssl" 
+	"cfengine"
 )
+
+PACKAGE_OBJS=(
+	"prepare_libs_cfengine"
+	"prepare_bins_cfengine"
+	"prepare_share_common"
+	"build_pkg_cfengine"
+	"clean"
+)
+
 
 SCRIPTDIR=$PWD
 BUILDDIR="$PWD/../build"
 
-VARDIR=/var/cfengine.test
-PREFIX=/var/cfengine.test
+VARDIR=/var/cfengine
+PREFIX=/var/cfengine
 CFE_WORKDIR=$VARDIR
 
 #export AR=/opt/csw/bin/gar
@@ -25,9 +34,10 @@ PATCH=gpatch
 
 NAME="CFEngine Community"
 PKGNAME="CFNcfengine-community"
-VERSION="3.6.0"
+VERSION="3.5.3"
 DESCRIPTION="CFEngine community (C) CFEngine AS 2008-. Packaged by www.cfengineers.net <contact@cfengineers.net>"
 
 SPOOL=$PREFIX.spool
-SPOOL_SRC=$SPOOL/src/cfengine/$VERSION
+PRODUCT=cfengine
+SPOOL_SRC=$SPOOL/src/$PRODUCT/$VERSION
 CFE_NAMING=`echo $OS | tr '[A-Z]' '[a-z]'`

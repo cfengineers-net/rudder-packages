@@ -12,7 +12,7 @@ case $1 in
                 fi
 
                 if [ $r -gt 0 ];then
-                        /var/cfengine/bin/cf-execd
+                        /var/rudder/cfengine-community/bin/cf-execd
                 else
                         echo "cf-execd seems to be running already..."
                 fi

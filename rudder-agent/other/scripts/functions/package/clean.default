@@ -1,0 +1,4 @@
+function package_clean() {
+	cd $SCRIPTDIR
+	rm -rf $SPOOL
+}

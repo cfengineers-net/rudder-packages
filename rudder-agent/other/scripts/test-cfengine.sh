@@ -5,8 +5,6 @@
 . $PWD/vars/cfengine.$OS
 . $PWD/vars/exports
 
-. $PWD/functions/common
-
 test -d $PREFIX && mv $PREFIX $PREFIX.bak
 
 gunzip -f $BUILDDIR/$PKGNAME-$VERSION-${CFE_NAMING}_$OS_RELEASE-$ARCH.pkg.gz

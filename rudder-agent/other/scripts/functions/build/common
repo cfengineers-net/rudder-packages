@@ -1,0 +1,19 @@
+function builder() {
+	FUNCTIONDIR=functions/build
+	for build in "${OBJECTS[@]}"; do
+		cd $SCRIPTDIR
+		
+		if [ -f $FUNCTIONDIR/$build.$OS.$ARCH ]; then
+			. $FUNCTIONDIR/$build.$OS.$ARCH
+		elif [ -f $FUNCTIONDIR/$build.$OS ]; then
+			. $FUNCTIONDIR/$build.$OS
+		elif [ -f $FUNCTIONDIR/$build.default ]; then
+			. $FUNCTIONDIR/$build.default
+		else
+			echo "ERROR: Unable to locate source file for function build_$build"
+			exit 1
+		fi
+	
+		build_$build
+	done
+}

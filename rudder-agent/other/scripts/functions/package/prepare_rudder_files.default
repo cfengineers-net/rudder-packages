@@ -1,0 +1,6 @@
+function package_prepare_rudder_files() {
+
+	for script in run-inventory check-rudder-agent; do
+		$CP -a $SCRIPTDIR/../../SOURCES/$script $SPOOL_SRC/$PREFIX/bin
+	done
+}

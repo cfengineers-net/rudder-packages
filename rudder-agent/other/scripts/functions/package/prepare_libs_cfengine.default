@@ -1,0 +1,16 @@
+function package_prepare_libs_cfengine() {
+	BINCOMPS="$PREFIX/bin/cf-*"
+	
+	mkdir -p $SPOOL_SRC
+
+#	(ldd $BINCOMPS | grep csw > /dev/null 2>&1) && (echo "FATAL: check linking manually" && exit 1)
+
+	ldd $BINCOMPS | grep $PREFIX/lib | awk '{print $3}' | sort -u | while read line; do
+		dir=${line%/*}
+		lib=${line##*/}
+		lib=${lib%%.so*}
+		mkdir -p $SPOOL_SRC/$dir
+		$CP -a $dir/$lib.so* $SPOOL_SRC/$dir
+		chmod 644 $SPOOL_SRC/$dir/*
+	done
+}

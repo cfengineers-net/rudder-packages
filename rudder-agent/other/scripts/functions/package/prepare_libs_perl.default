@@ -1,0 +1,19 @@
+function package_prepare_libs_perl {
+	
+	(find $PREFIX/lib/perl5 -name "*.so*" | xargs ldd && ldd $PREFIX/bin/perl) | \
+		awk '/\=\>/{print $3}' | sort -u  | grep $PREFIX | while read line; do
+		
+		dir=${line%/*}
+                lib=${line##*/}
+                lib=${lib%%.so*}
+		if [ ! -d $SPOOL_SRC/$dir ]; then
+	                mkdir -p $SPOOL_SRC/$dir
+		fi
+		if [ ! -e $SPOOL_SRC/$line ]; then
+	                $CP -a $dir/$lib.so* $SPOOL_SRC/$dir
+		fi
+                chmod 644 $SPOOL_SRC/$dir/*
+	done
+
+	$CP -a $PREFIX/lib/perl5 $SPOOL_SRC/$PREFIX/lib
+}

@@ -1,0 +1,19 @@
+function packager() {
+	FUNCTIONDIR=functions/package
+	for package in "${PACKAGE_OBJS[@]}"; do
+		cd $SCRIPTDIR
+		
+		if [ -f $FUNCTIONDIR/$package.$OS.$ARCH ]; then
+			. $FUNCTIONDIR/$package.$OS.$ARCH
+		elif [ -f $FUNCTIONDIR/$package.$OS ]; then
+			. $FUNCTIONDIR/$package.$OS
+		elif [ -f $FUNCTIONDIR/$package.default ]; then
+			. $FUNCTIONDIR/$package.default
+		else
+			echo "ERROR: Unable to locate source file for function package_$package"
+			exit 1
+		fi
+	
+		package_$package
+	done
+}

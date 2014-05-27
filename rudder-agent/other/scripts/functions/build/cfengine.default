@@ -7,6 +7,12 @@ function build_cfengine() {
 	else
 		OPTS="$OPTS --without-libxml2"
 	fi
+	
+	if [ -f $PREFIX/include/lmdb.h ]; then
+		OPTS="$OPTS --with-lmdb=$PREFIX"
+	elif [ -f $PREFIX/include/tchdb.h ]; then
+		OPTS="$OPTS --with-tokyocabinet=$PREFIX"
+	fi
 
 	if [ -d $PREFIX/nothing-here ]; then
 		OPTS="$OPTS --with-mysql=$PREFIX"
@@ -20,7 +26,7 @@ function build_cfengine() {
 		OPTS="$OPTS --without-postgresql"
 	fi
 
-	./configure --prefix=$PREFIX --with-tokyocabinet=$PREFIX --with-openssl=$PREFIX \
+	./configure --prefix=$PREFIX --with-openssl=$PREFIX \
 		--with-pcre=$PREFIX --with-workdir=$CFE_WORKDIR \
 		$OPTS
 	$MAKE

@@ -1,0 +1,4 @@
+function package_prepare_share_common() {
+	test -d $SPOOL_SRC/$PREFIX/share && rm -rf $SPOOL_SRC/$PREFIX/share
+	$CP -a $PREFIX/share $SPOOL_SRC/$PREFIX/share
+}

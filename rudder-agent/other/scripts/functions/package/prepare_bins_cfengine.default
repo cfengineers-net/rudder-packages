@@ -1,0 +1,7 @@
+function package_prepare_bins_cfengine() {
+	mkdir -p $SPOOL_SRC/$PREFIX/bin
+	$CP -a $PREFIX/bin/cf-* $SPOOL_SRC/$PREFIX/bin	
+	if [ -f $PREFIX/bin/tchmgr ]; then
+		$CP -a $PREFIX/bin/tchmgr $SPOOL_SRC/$PREFIX/bin
+	fi
+}

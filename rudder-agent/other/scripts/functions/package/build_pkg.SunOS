@@ -1,0 +1,36 @@
+function package_build_pkg() {
+	find $SPOOL_SRC -exec chown root:root {} \;
+	cat > $SPOOL_SRC/pkginfo << EOF
+PKG="$PKGNAME"
+NAME="$NAME"
+ARCH="$ARCH"
+VERSION="$VERSION"
+CATEGORY="application"
+VENDOR="$DESCRIPTION"
+EMAIL="contact@cfengineers.net"
+PSTAMP="www.cfengineers.net"
+BASEDIR="/"
+CLASSES="none"
+SUNW_PKG_ALLZONES="false"
+SUNW_PKG_THISZONE="true"
+EOF
+	$CP -a $SCRIPTDIR/../pkg/$PRODUCT/$OS/* $SPOOL_SRC
+	cat > $SPOOL_SRC/prototype << EOF
+i pkginfo=./pkginfo
+i postinstall=./postinstall
+i preremove=./preremove
+i postremove=./postremove
+i preinstall=./preinstall
+EOF
+	cd $SPOOL_SRC
+	DIR=${PREFIX#/*}
+	DIR=${DIR%%/*}
+	find $DIR | pkgproto >> $SPOOL_SRC/prototype
+	find etc | pkgproto >> $SPOOL_SRC/prototype
+
+	SPOOL_TRANS=$SPOOL/trans/$PRODUCT/$VERSION
+	mkdir -p $SPOOL_TRANS
+	pkgmk -o -r $SPOOL_SRC -d $SPOOL_TRANS
+	pkgtrans -s $SPOOL_TRANS $BUILDDIR/$PKGNAME-$VERSION-${CFE_NAMING}_$OS_RELEASE-$ARCH.pkg all 
+	gzip -f $BUILDDIR/$PKGNAME-$VERSION-${CFE_NAMING}_$OS_RELEASE-$ARCH.pkg
+}

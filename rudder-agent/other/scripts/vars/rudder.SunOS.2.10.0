@@ -1,0 +1,55 @@
+OBJECTS=(
+#	"prepare"
+#	"zlib"
+#	"bzlib2"
+#	"pcre"
+#	"tokyocabinet"
+#	"openssl" 
+#	"cfengine"
+#	"rudder_extra"
+#	"rudder_perl"
+#	"rudder_perl_mod_ssleay"
+#	"rudder_perl_mod_common"
+#	"rudder_fusion_inventory"
+)
+
+PACKAGE_OBJS=(
+	"prepare_libs_cfengine"
+	"prepare_bins_cfengine"
+	"prepare_libs_perl"
+	"prepare_bins_perl"
+	"prepare_rudder_files"
+	"prepare_rudder_extra_files"
+	"prepare_share_common"
+	"build_pkg"
+	"clean"
+)
+
+SCRIPTDIR=$PWD
+BUILDDIR="$PWD/../build"
+
+VARDIR=/var/rudder
+PREFIX=/opt/rudder
+CFE_WORKDIR=$VARDIR/cfengine-community
+
+#export AR=/opt/csw/bin/gar
+
+CP=gcp
+MAKE=gmake
+PATCH=gpatch
+
+# Rudder specifics
+PERL_VERSION="5.12.4";
+MODULES="Digest::MD5 Net::IP XML::SAX XML::Simple UNIVERSAL::require File::Which XML::TreePP"
+
+NAME="Rudder Agent"
+PKGNAME="NRMrudder-agent"
+VERSION="2.10.0"
+DESCRIPTION="Rudder agent. Packaged by for Normation by www.cfengineers.net <contact@cfengineers.net>"
+
+PRODUCT=rudder
+SPOOL=$PREFIX.spool
+SPOOL_SRC=$SPOOL/src/$PRODUCT/$VERSION
+CFE_NAMING=`echo $OS | tr '[A-Z]' '[a-z]'`
+
+export LDDLFLAGS="-G -fstack-protector -L$PREFIX/lib -R$PREFIX/lib"
