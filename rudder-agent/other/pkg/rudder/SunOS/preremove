@@ -7,11 +7,12 @@
 # Do it during upgrade and uninstall
 # Keep a backup copy of uuid.hive
 mkdir -p /var/backups/rudder
-cp -f /opt/rudder/etc/uuid.hive /var/backups/rudder/uuid-$(date +%Y%m%d).hive
+DATE=`date +%Y%m%d`
+cp -f /opt/rudder/etc/uuid.hive /var/backups/rudder/uuid-$DATE.hive
 echo "INFO: A back up copy of the /opt/rudder/etc/uuid.hive has been created in /var/backups/rudder"
 
 # Keep a backup copy of CFEngine ppkeys
-cp -rp -f /var/rudder/cfengine-community/ppkeys/ /var/backups/rudder/ppkeys-$(date +%Y%m%d)
+cp -rp -f /var/rudder/cfengine-community/ppkeys/ /var/backups/rudder/ppkeys-$DATE
 echo "INFO: A back up copy of the /var/rudder/cfengine-community/ppkeys has been created in /var/backups/rudder"
 
 

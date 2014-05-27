@@ -1,0 +1,4 @@
+function package_prepare_etc_rudder() {
+	test -d $SPOOL_SRC/$PREFIX/etc && rm -rf $SPOOL_SRC/$PREFIX/etc
+	$CP -a $PREFIX/etc $SPOOL_SRC/$PREFIX/etc
+}

@@ -1,0 +1,5 @@
+function package_prepare_rudder_initial_promises() {
+	if [ ! -d $SPOOL_SRC/$PREFIX/share/initial-promises ]; then
+		$CP -a $SCRIPTDIR/../build/rudder-sources/rudder-techniques/initial-promises/node-server $SPOOL_SRC/$PREFIX/share/initial-promises
+	fi
+}

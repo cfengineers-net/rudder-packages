@@ -21,6 +21,8 @@ PACKAGE_OBJS=(
 	"prepare_rudder_files"
 	"prepare_rudder_extra_files"
 	"prepare_share_common"
+	"prepare_rudder_initial_promises"
+	"prepare_etc_rudder"
 	"build_pkg"
 	"clean"
 )
