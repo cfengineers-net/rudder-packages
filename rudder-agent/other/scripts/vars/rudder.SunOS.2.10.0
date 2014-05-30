@@ -10,21 +10,21 @@ OBJECTS=(
 #	"rudder_perl"
 #	"rudder_perl_mod_ssleay"
 #	"rudder_perl_mod_common"
-#	"rudder_fusion_inventory"
+	"rudder_fusion_inventory"
 )
 
 PACKAGE_OBJS=(
-	"prepare_libs_cfengine"
-	"prepare_bins_cfengine"
-	"prepare_libs_perl"
-	"prepare_bins_perl"
-	"prepare_rudder_files"
-	"prepare_rudder_extra_files"
-	"prepare_share_common"
-	"prepare_rudder_initial_promises"
-	"prepare_etc_rudder"
-	"build_pkg"
-	"clean"
+#	"prepare_libs_cfengine"
+#	"prepare_bins_cfengine"
+#	"prepare_libs_perl"
+#	"prepare_bins_perl"
+#	"prepare_rudder_files"
+#	"prepare_rudder_extra_files"
+#	"prepare_share_common"
+#	"prepare_rudder_initial_promises"
+#	"prepare_etc_rudder"
+#	"build_pkg"
+#	"clean"
 )
 
 SCRIPTDIR=$PWD

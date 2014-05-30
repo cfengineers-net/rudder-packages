@@ -1,0 +1,15 @@
+function build_rudder_fusion_inventory() {
+	cd $BUILDDIR/fusioninventory-agent
+
+	mkdir -p $PREFIX/share/fusion-utils && $CP -a share/* $PREFIX/share/fusion-utils
+
+	$PATCH -d $BUILDDIR/fusioninventory-agent -p1 < $SCRIPTDIR/patches/SunOS/fusioninventory/0001-solaris-broken-pipe.patch
+	$PATCH -d $BUILDDIR/fusioninventory-agent -p1 < $SCRIPTDIR/patches/SunOS/fusioninventory/0002-silence-missing-binaries-1.patch
+	$PATCH -d $BUILDDIR/fusioninventory-agent -p1 < $SCRIPTDIR/patches/SunOS/fusioninventory/0003-silence-missing-binaries-2.patch
+	$PATCH -d $BUILDDIR/fusioninventory-agent -p1 < $SCRIPTDIR/patches/SunOS/fusioninventory/0004-silence-missing-binaries-3.patch
+
+	PERL_MM_USE_DEFAULT=1 $PREFIX/bin/perl Makefile.PL --default PREFIX=$PREFIX
+	$MAKE install
+
+	$CP -a lib/FusionInventory $PREFIX/lib/perl5/
+}
