@@ -1,0 +1,6 @@
+function build_openssl() {
+	cd $BUILDDIR/openssl-source
+	./Configure darwin64-x86_64-cc shared --prefix=$PREFIX	
+	$MAKE
+	$MAKE install
+}

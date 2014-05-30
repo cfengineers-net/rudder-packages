@@ -33,7 +33,7 @@ PATCH = /usr/bin/gpatch
 FIND = /opt/csw/bin/gfind
 TAR = /opt/csw/bin/gtar
 
-localdepends: $(BUILD_DIR) $(BUILD_DIR)/initial-promises $(BUILD_DIR)/files $(BUILD_DIR)/fusioninventory-agent $(BUILD_DIR)/zlib-source $(BUILD_DIR)/bzip2-source $(BUILD_DIR)/tokyocabinet-source $(BUILD_DIR)/pcre-source $(BUILD_DIR)/openssl-source $(BUILD_DIR)/cfengine-source $(BUILD_DIR)/rudder-agent.cron 
+localdepends: $(BUILD_DIR) $(BUILD_DIR)/initial-promises $(BUILD_DIR)/files $(BUILD_DIR)/fusioninventory-agent $(BUILD_DIR)/zlib-source $(BUILD_DIR)/bzip2-source $(BUILD_DIR)/tokyocabinet-source $(BUILD_DIR)/pcre-source $(BUILD_DIR)/openssl-source $(BUILD_DIR)/cfengine-source
 	rm -rf $(TMP_DIR)
 
 $(BUILD_DIR):
