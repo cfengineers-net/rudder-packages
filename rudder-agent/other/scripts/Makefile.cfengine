@@ -80,6 +80,7 @@ $(BUILD_DIR)/libxml2-source:
 $(BUILD_DIR)/libiconv-source:
 	$(WGET) -O $(TMP_DIR)/libiconv.tgz http://ftp.gnu.org/pub/gnu/libiconv/libiconv-$(LIBICONV_RELEASE).tar.gz 
 	$(TAR) xzf $(TMP_DIR)/libiconv.tgz -C $(TMP_DIR)
+	mv $(TMP_DIR)/libiconv-$(LIBICONV_RELEASE) $(BUILD_DIR)/libiconv-source
 
 $(BUILD_DIR)/openldap-source:
 	$(WGET) -O $(TMP_DIR)/openldap.tgz http://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-$(OPENLDAP_RELEASE).tgz
