@@ -1,0 +1,40 @@
+function build_cfengine() {
+	cd $BUILDDIR/cfengine-source/libutils
+	$PATCH -p0 < $SCRIPTDIR/patches/SunOS/cfengine/0001-fix-missing-include-ieeefp-header-file.patch
+
+	cd $BUILDDIR/cfengine-source/libpromises
+	$PATCH -p0 < $SCRIPTDIR/patches/SunOS/cfengine/0002-fix-missing-unistd-h-include-in-solaris-ifaddrs-h.patch
+
+	cd $BUILDDIR/cfengine-source
+	OPTS=""
+
+	if [ -d $PREFIX/include/libxml2 ]; then
+		OPTS="$OPTS --with-libxml2=$PREFIX"
+	else
+		OPTS="$OPTS --without-libxml2"
+	fi
+	
+	if [ -f $PREFIX/include/lmdb.h ]; then
+		OPTS="$OPTS --with-lmdb=$PREFIX"
+	elif [ -f $PREFIX/include/tchdb.h ]; then
+		OPTS="$OPTS --with-tokyocabinet=$PREFIX"
+	fi
+
+	if [ -d $PREFIX/nothing-here ]; then
+		OPTS="$OPTS --with-mysql=$PREFIX"
+	else
+		OPTS="$OPTS --without-mysql"
+	fi
+
+	if [ -d $PREFIX/nothing-here ]; then
+		OPTS="$OPTS --with-postgresql=$PREFIX"
+	else
+		OPTS="$OPTS --without-postgresql"
+	fi
+
+	./configure --prefix=$PREFIX --with-openssl=$PREFIX \
+		--with-pcre=$PREFIX --with-workdir=$CFE_WORKDIR \
+		$OPTS
+	$MAKE
+	$MAKE install
+}

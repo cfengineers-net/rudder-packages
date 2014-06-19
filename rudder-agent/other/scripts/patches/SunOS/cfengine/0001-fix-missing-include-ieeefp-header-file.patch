@@ -1,0 +1,10 @@
+--- platform.h	Thu Jun 19 15:02:39 2014
++++ platform.h	Thu Jun 19 15:02:54 2014
+@@ -67,6 +67,7 @@
+ 
+ /* Standard C. */
+ #include <stdio.h>
++#include <ieeefp.h>
+ #include <math.h>
+ #include <string.h>
+ #include <ctype.h>
