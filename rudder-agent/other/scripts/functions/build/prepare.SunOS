@@ -1,5 +1,5 @@
 function build_prepare() {
-	mkdir -p $PREFIX/lib $PREFIX/include	
+	mkdir -p $PREFIX/lib $PREFIX/include $PREFIX/bin
 	$CP -a /opt/csw/lib/libgcc_s.so* $PREFIX/lib
 #	$CP -a /opt/csw/lib/libssp.so* $PREFIX/lib
 #	chrpath -r $PREFIX/lib $PREFIX/lib/libssp.so.0.0.0
