@@ -12,8 +12,8 @@ OBJECTS=(
 SCRIPTDIR=$PWD
 BUILDDIR="$PWD/../build"
 
-VARDIR=/var/cfengine.test
-PREFIX=/var/cfengine.test
+VARDIR=/var/cfengine
+PREFIX=/var/cfengine
 CFE_WORKDIR=$VARDIR
 
 #export AR=/opt/csw/bin/gar
