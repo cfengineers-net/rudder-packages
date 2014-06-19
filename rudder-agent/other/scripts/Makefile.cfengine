@@ -18,8 +18,7 @@
 
 .DEFAULT_GOAL := localdepends
 
-CFENGINE_RELEASE = 3.5.3
-TOKYOCABINET_RELEASE = 1.4.48
+CFENGINE_RELEASE = 3.6.0
 PCRE_RELEASE = 8.35
 OPENSSL_RELEASE = 1.0.1g
 ZLIB_RELEASE = 1.2.8
@@ -34,7 +33,7 @@ PATCH = /usr/bin/gpatch
 FIND = /opt/csw/bin/gfind
 TAR = /opt/csw/bin/gtar
 
-localdepends: $(BUILD_DIR) $(BUILD_DIR)/zlib-source $(BUILD_DIR)/bzip2-source $(BUILD_DIR)/tokyocabinet-source $(BUILD_DIR)/pcre-source $(BUILD_DIR)/openssl-source $(BUILD_DIR)/cfengine-source $(BUILD_DIR)/libxml2-source $(BUILD_DIR)/libiconv-source
+localdepends: $(BUILD_DIR) $(BUILD_DIR)/zlib-source $(BUILD_DIR)/bzip2-source $(BUILD_DIR)/openldap-source $(BUILD_DIR)/pcre-source $(BUILD_DIR)/openssl-source $(BUILD_DIR)/cfengine-source $(BUILD_DIR)/libxml2-source $(BUILD_DIR)/libiconv-source
 	rm -rf $(TMP_DIR)
 
 $(BUILD_DIR):
@@ -42,7 +41,8 @@ $(BUILD_DIR):
 
 $(BUILD_DIR)/cfengine-source:
 	# Original URL: http://cfengine.com/source-code/download?file=cfengine-$(CFENGINE_RELEASE).tar.gz
-	$(WGET) -O $(TMP_DIR)/cfengine.tgz http://www.normation.com/tarball/cfengine-$(CFENGINE_RELEASE).tar.gz
+	#$(WGET) -O $(TMP_DIR)/cfengine.tgz http://www.normation.com/tarball/cfengine-$(CFENGINE_RELEASE).tar.gz
+	$(WGET) -O $(TMP_DIR)/cfengine.tgz https://s3.amazonaws.com/cfengine.package-repos/tarballs/cfengine-$(CFENGINE_RELEASE).tar.gz
 	$(TAR) xzf $(TMP_DIR)/cfengine.tgz -C $(TMP_DIR)
 	mv $(TMP_DIR)/cfengine-$(CFENGINE_RELEASE) $(BUILD_DIR)/cfengine-source
 
