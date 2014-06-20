@@ -9,6 +9,14 @@ OBJECTS=(
 	"cfengine"
 )
 
+PACKAGE_OBJS=(
+	"prepare_libs_cfengine"
+	"prepare_bins_cfengine"
+	"prepare_share_common"
+	"build_pkg"
+	"clean"
+)
+
 SCRIPTDIR=$PWD
 BUILDDIR="$PWD/../build"
 
