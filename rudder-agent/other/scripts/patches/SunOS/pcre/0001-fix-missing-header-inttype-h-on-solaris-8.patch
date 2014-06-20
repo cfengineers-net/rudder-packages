@@ -1,0 +1,10 @@
+--- pcre_compile.c	2014-03-10 17:23:46.000000000 +0100
++++ pcre_compile.c	2014-06-20 11:32:07.396060719 +0200
+@@ -51,6 +51,7 @@
+ #define PSEND   end_pattern    /* Field containing processed string end */
+ 
+ #include "pcre_internal.h"
++#include <inttypes.h>
+ 
+ 
+ /* When PCRE_DEBUG is defined, we need the pcre(16|32)_printint() function, which

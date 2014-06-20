@@ -1,0 +1,11 @@
+function build_pcre() {
+	cd $BUILDDIR/pcre-source
+	case $OS_RELEASE in
+		5.8)
+			$PATCH -p0 < $SCRIPTDIR/patches/SunOS/pcre/0001-fix-missing-header-inttype-h-on-solaris-8.patch
+		;;
+	esac
+	./configure --prefix=$PREFIX --enable-shared --disable-static --disable-cpp --enable-unicode-properties
+	$MAKE
+	$MAKE install
+}
