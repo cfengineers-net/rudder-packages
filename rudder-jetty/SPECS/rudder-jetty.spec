@@ -54,9 +54,9 @@ Group: Applications/System
 #Source1: jetty7/bin/jetty.sh
 Source2: rudder-jetty.default
 Source3: rudder-jetty.conf
+Source4: rudder-jetty
 
 Patch1: jetty-init-sles.patch
-Patch2: jetty-init-rudder.patch
 
 # Prevent rpmbuild to use 64 bits libraries just because of the presence
 # of one 64 bits binary in the jetty archive.
@@ -75,17 +75,27 @@ BuildArch: noarch
 # Also, I would like to have something like %elif here, but not implemented
 # in RPM yet...
 
-%if 0%{?rhel} > 6
+%if 0%{?rhel} && 0%{?rhel} > 6
 Requires: jre >= 1.7
 %endif
 
-%if 0%{?rhel} == 6
+%if 0%{?rhel} && 0%{?rhel} == 6
 Requires: java-1.7.0-openjdk
 %endif
 
 %if 0%{!?rhel}
 Requires: jre >= 1.6
 %endif
+
+# We are providing Jetty, but the name of the provided element depends of the
+# OS flavour.
+
+
+%if 0%{?rhel} || 0%{?fedora}
+Provides: jetty-eclipse jetty-server
+%endif
+
+# No Jetty provided by SLES...
 
 %description
 Rudder is an open source configuration management and audit solution.
@@ -123,7 +133,8 @@ echo "No build"
 rm -rf %{buildroot}
 
 mkdir -p %{buildroot}/opt/rudder
-mkdir -p %{buildroot}/opt/rudder/etc
+mkdir -p %{buildroot}/opt/rudder/etc/
+mkdir -p %{buildroot}/opt/rudder/etc/server-roles.d/
 mkdir -p %{buildroot}%{rudderlogdir}/webapp
 mkdir -p %{buildroot}/var/rudder/run
 
@@ -137,6 +148,8 @@ mkdir -p %{buildroot}/etc/default
 install -m 755 jetty7/bin/jetty-sles.sh %{buildroot}/etc/init.d/rudder-jetty
 install -m 644 %{SOURCE2} %{buildroot}/etc/default/rudder-jetty
 install -m 644 %{SOURCE3} %{buildroot}/opt/rudder/etc/rudder-jetty.conf
+
+install -m 644 %{SOURCE4} %{buildroot}/opt/rudder/etc/server-roles.d/
 
 %pre -n rudder-jetty
 #=================================================
@@ -158,9 +171,9 @@ fi
 if [ $1 -eq 1 ]
 then
 	# Set rudder-agent as service
-	/sbin/chkconfig --add rudder-jetty
-	%if 0%{?rhel} >= 6
-	/sbin/chkconfig rudder-jetty on
+	chkconfig --add rudder-jetty
+	%if 0%{?rhel} && 0%{?rhel} >= 6
+	chkconfig rudder-jetty on
 	%endif
 fi
 

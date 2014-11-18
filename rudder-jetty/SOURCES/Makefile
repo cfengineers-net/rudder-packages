@@ -33,14 +33,24 @@ localdepends: ./jetty7
 	mv $(TMP_DIR)/jetty-hightide-$(JETTY_RELEASE).v$(DATE_RELEASE) ./jetty7
 	rm -rf $(TMP_DIR)
 
+	# Remove useless / demo elements from Jetty
+	rm -rf ./jetty7/javadoc
+
+	rm -rf ./jetty7/webapps/*
+	rm -rf ./jetty7/contexts/*
+
+	touch ./jetty7/webapps/.donotdelete
+
 	# Change default log directory for jetty
 	sed -i 's/default=\".\/logs\"/default=\"\/var\/log\/rudder\/webapp\"/g' ./jetty7/etc/jetty-logging.xml
 
 	# Change jetty's default settings to listen on localhost only
 	sed -i 's/\(<Set\ name=\"host\"><Property\ name=\"jetty.host\"\ \)\(\/>\)/\1default="127.0.0.1"\2/g' ./jetty7/etc/jetty.xml
 
+	# Set jetty requestHeaderSize if not yet modified
+	grep 'Set name="requestHeaderSize"' ./jetty7/etc/jetty.xml >/dev/null || sed -i -e '/<New class="org.eclipse.jetty.server.nio.SelectChannelConnector">/s/$$/\n            <Set name="requestHeaderSize">8192<\/Set>/' ./jetty7/etc/jetty.xml
+
 	# Change jetty.sh before distincts files
-	patch -p0 -s < jetty-init-rudder.patch
 	patch -p0 -s < jetty-init-umask.patch
 	patch -p0 -s < jetty-init-stop-fix.patch
 	patch -p0 -s < jetty-init-sizecheck.patch

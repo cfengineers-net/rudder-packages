@@ -21,9 +21,17 @@ set -e
 case "$1" in
 	configure)
 
+		echo "$(date) - Starting rudder-agent post installation script" >> /var/log/rudder/install/rudder-agent.log
+
 		# Is this the first installation?
 		CFRUDDER_FIRST_INSTALL=0
 		if [ ! -x /var/rudder/cfengine-community/bin/cf-execd ]; then CFRUDDER_FIRST_INSTALL=1; fi
+
+		# Reload the linker cache (to acknowledge LMDB's presence if needed)
+		if [ -e /etc/ld.so.conf.d/rudder.conf ]; then
+			echo "Found /etc/ld.so.conf.d/rudder.conf, running ldconfig" >> /var/log/rudder/install/rudder-agent.log
+			ldconfig -v >> /var/log/rudder/install/rudder-agent.log 2>&1
+		fi
 
 		echo "Making sure that the permissions on the CFEngine key directory are correct..."
     if [ -d /var/rudder/cfengine-community/ppkeys ]; then
@@ -42,14 +50,32 @@ case "$1" in
 			touch /opt/rudder/etc/disable-agent
 		fi
 
-		if [ ${CFRUDDER_FIRST_INSTALL} -ne 1 -a -x /etc/init.d/rudder-agent ]; then /etc/init.d/rudder-agent stop; fi
+		if [ ${CFRUDDER_FIRST_INSTALL} -ne 1 -a -x /etc/init.d/rudder-agent ]; then /etc/init.d/rudder-agent stop || /etc/init.d/rudder-agent forcestop; fi
 
 		# Copy CFEngine binaries (Changed location from sbin/ to bin/ in version 3.4)
 		cp -a -f /opt/rudder/bin/cf-* /var/rudder/cfengine-community/bin/
+		cp -a -f /opt/rudder/bin/rpmvercmp /var/rudder/cfengine-community/bin/
 		NB_COPIED_BINARIES=`ls -1 /var/rudder/cfengine-community/bin/ | wc -l`
 		if [ ${NB_COPIED_BINARIES} -gt 0 ];then echo "CFEngine binaries copied to workdir"; fi
 
-		# Copy initial promises if there aren't any already
+		# Create a key if we don't have one yet
+		if [ ! -f /var/rudder/cfengine-community/ppkeys/localhost.priv ]
+		then
+			echo -n "INFO: Creating keys for CFEngine agent..."
+			/var/rudder/cfengine-community/bin/cf-key >> /var/log/rudder/install/rudder-agent.log 2>&1
+			echo " Done."
+		fi
+
+		# Set up initial promises if necessary
+    
+		# Backup rudder-server-roles.conf
+		if [ -e /var/rudder/cfengine-community/inputs/rudder-server-roles.conf ]
+		then
+			mkdir -p /var/backups/rudder
+			cp -a /var/rudder/cfengine-community/inputs/rudder-server-roles.conf /var/backups/rudder/
+			RESTORE_SERVER_ROLES_BACKUP=1
+		fi
+
 		if [ ! -e /var/rudder/cfengine-community/inputs/promises.cf ]
 		then
 			cp -r /opt/rudder/share/initial-promises/* /var/rudder/cfengine-community/inputs
@@ -63,6 +89,11 @@ case "$1" in
 			rsync --delete -aq /opt/rudder/share/initial-promises/ /var/rudder/cfengine-community/inputs/
 		fi
 
+		# Restore rudder-server-roles.conf if necessary
+		if [ "z${RESTORE_SERVER_ROLES_BACKUP}" = "z1" ]; then
+			cp -a /var/backups/rudder/rudder-server-roles.conf /var/rudder/cfengine-community/inputs/rudder-server-roles.conf
+		fi
+
 		# Migration to CFEngine 3.5: Correct a specific Technique that breaks the most recent CFEngine versions
 		if [ -f /var/rudder/cfengine-community/inputs/distributePolicy/1.0/passwordCheck.cf ]
 		then
@@ -73,6 +104,9 @@ case "$1" in
 		if [ ${I_SET_THE_LOCK} -eq 1 ]; then
 			rm -f /opt/rudder/etc/disable-agent
 		fi
+
+		# Remove cfengine lock log file : http://www.rudder-project.org/redmine/issues/5488
+		rm -f /var/rudder/cfengine-community/cf3.*.runlog*
 
 		# Restart daemons if we stopped them, otherwise not
 		if [ ${CFRUDDER_FIRST_INSTALL} -ne 1 ]
@@ -100,14 +134,6 @@ case "$1" in
 			echo "# /etc/init.d/rudder-agent start"
 			echo "This node will then appear in the Rudder web interface under 'Accept new nodes'."
 			echo "********************************************************************************"
-		fi
-
-		# Create a key if we don't have one yet
-		if [ ! -f /var/rudder/cfengine-community/ppkeys/localhost.priv ]
-		then
-			echo -n "INFO: Creating keys for CFEngine agent..."
-			/var/rudder/cfengine-community/bin/cf-key > /dev/null 2>&1
-			echo " Done."
 		fi
 
 		# Add temporary cron for checking UUID. This cron is created in postinst

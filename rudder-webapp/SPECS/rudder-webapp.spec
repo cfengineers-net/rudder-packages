@@ -27,38 +27,46 @@
 #=================================================
 # Variables
 #=================================================
-%define real_name        rudder-webapp
+%define real_name               rudder-webapp
 
-%define rudderdir        /opt/rudder
-%define ruddervardir     /var/rudder
-%define rudderlogdir     /var/log/rudder
-%define sharedir         /usr/share
+%define rudderdir               /opt/rudder
+%define ruddervardir            /var/rudder
+%define rudderlogdir            /var/log/rudder
+%define sharedir                /usr/share
+
+%define config_repository_group rudder
 
 %define maven_settings settings-external.xml
 
 %if 0%{?sles_version}
-%define apache              apache2
-%define apache_tools        apache2-utils
-%define apache_group        www
-%define htpasswd_cmd        htpasswd2
-%define sysloginitscript    /etc/init.d/syslog
-%define apache_vhost_dir    %{apache}/vhosts.d
+%define apache                  apache2
+%define apache_tools            apache2-utils
+%define apache_group            www
+%define htpasswd_cmd            htpasswd2
+%define syslogservicename       syslog
+%define apache_vhost_dir        %{apache}/vhosts.d
+%define ldap_clients            openldap2-client
+%define usermod_opt             A
 %endif
-%if 0%{?el5}
-%define apache              httpd
-%define apache_tools        httpd-tools
-%define apache_group        apache
-%define htpasswd_cmd        htpasswd
-%define sysloginitscript    /etc/init.d/syslog
-%define apache_vhost_dir    %{apache}/conf.d
+%if 0%{?rhel} == 5 || 0%{?el5}
+%define apache                  httpd
+%define apache_tools            httpd-tools
+%define apache_group            apache
+%define htpasswd_cmd            htpasswd
+%define syslogservicename       syslog
+%define apache_vhost_dir        %{apache}/conf.d
+%define ldap_clients            openldap-clients
+%define usermod_opt             aG
 %endif
-%if 0%{?el6}
-%define apache              httpd
-%define apache_tools        httpd-tools
-%define apache_group        apache
-%define htpasswd_cmd        htpasswd
-%define sysloginitscript    /etc/init.d/rsyslog
-%define apache_vhost_dir    %{apache}/conf.d
+%if 0%{?rhel} && 0%{?rhel} >= 6
+%define apache                  httpd
+%define apache_tools            httpd-tools
+%define apache_group            apache
+%define htpasswd_cmd            htpasswd
+%define syslogservicename       rsyslog
+%define apache_vhost_dir        %{apache}/conf.d
+%define ldap_clients            openldap-clients
+%define usermod_opt             aG
 %endif
 
 #=================================================
@@ -77,16 +85,44 @@ Group: Applications/System
 Source1: rudder-users.xml
 Source2: rudder.xml
 Source3: rudder-networks.conf
+Source4: rudder-networks-24.conf
 Source5: rudder-upgrade
+Source6: rudder-upgrade-database
+Source7: rudder-webapp
+Source8: rudder-web
+Source10: rudder-init
+Source11: rudder-node-to-relay
+Source12: rudder-root-rename
+Source13: rudder-passwords.conf
+Source14: rudder-plugin
+Source15: post.write_technique.commit.sh
+Source16: post.write_technique.rudderify.sh
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch: noarch
 
 BuildRequires: jdk >= 1.6
-Requires: rudder-jetty rudder-techniques ncf %{apache} %{apache_tools} git-core rsync openssl
+Requires: rudder-techniques ncf ncf-api-virtualenv %{apache} %{apache_tools} git-core rsync openssl %{ldap_clients}
 
+# We need the psql client so that we can run database checks and upgrades (rudder-upgrade, in particular)
+Requires: postgresql
+
+# Those jetty packages are virtual packages provided by our Jetty and the system one.
+
+## RHEL
 %if 0%{?rhel}
-Requires: mod_ssl
+Requires: mod_ssl jetty-eclipse
+%endif
+
+## Fedora
+%if 0%{?fedora}
+Requires: jetty-server
+%endif
+
+## SLES
+## No Jetty provided by SLES... Use our own.
+%if 0%{?sles_version}
+Requires: rudder-jetty
 %endif
 
 %description
@@ -127,10 +163,10 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}%{rudderdir}/etc/
 mkdir -p %{buildroot}%{rudderdir}/etc/ssl/
 mkdir -p %{buildroot}%{rudderdir}/etc/plugins/
+mkdir -p %{buildroot}%{rudderdir}/etc/server-roles.d/
 mkdir -p %{buildroot}%{rudderdir}/bin/
-mkdir -p %{buildroot}%{rudderdir}/jetty7/webapps/
-mkdir -p %{buildroot}%{rudderdir}/jetty7/contexts/
-mkdir -p %{buildroot}%{rudderdir}/jetty7/rudder-plugins/
+mkdir -p %{buildroot}%{rudderdir}/share/webapps/
+mkdir -p %{buildroot}%{rudderdir}/share/rudder-plugins/
 mkdir -p %{buildroot}%{rudderdir}/share/tools
 mkdir -p %{buildroot}%{rudderdir}/share/plugins/
 mkdir -p %{buildroot}%{rudderdir}/share/upgrade-tools/
@@ -138,10 +174,25 @@ mkdir -p %{buildroot}%{ruddervardir}/inventories/incoming
 mkdir -p %{buildroot}%{ruddervardir}/inventories/accepted-nodes-updates
 mkdir -p %{buildroot}%{ruddervardir}/inventories/received
 mkdir -p %{buildroot}%{ruddervardir}/inventories/failed
+mkdir -p %{buildroot}%{ruddervardir}/configuration-repository/ncf/ncf-hooks.d
 mkdir -p %{buildroot}%{rudderlogdir}/apache2/
 mkdir -p %{buildroot}/etc/%{apache_vhost_dir}/
 mkdir -p %{buildroot}/etc/sysconfig/
 mkdir -p %{buildroot}/usr/share/doc/rudder
+
+# Emulate installation of file rudder.xml in order to be owned by package
+mkdir -p %{buildroot}%{rudderdir}/jetty7/contexts/
+touch %{buildroot}%{rudderdir}/jetty7/contexts/rudder.xml
+
+# Install helper scripts
+cp %{SOURCE10} %{buildroot}%{rudderdir}/bin/
+
+# %{rudderdir}/bin/rudder-init.sh -> %{rudderdir}/bin/rudder-init
+ln -sf %{rudderdir}/bin/rudder-init %{buildroot}%{rudderdir}/bin/rudder-init.sh
+
+cp %{SOURCE11} %{buildroot}%{rudderdir}/bin/
+cp %{SOURCE12} %{buildroot}%{rudderdir}/bin/
+cp %{SOURCE14} %{buildroot}%{rudderdir}/bin/
 
 cp %{SOURCE1} %{buildroot}%{rudderdir}/etc/
 cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/ldap/bootstrap.ldif %{buildroot}%{rudderdir}/share/
@@ -150,7 +201,7 @@ cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/ldap/demo-
 cp %{_sourcedir}/rudder-sources/rudder/rudder-web/src/main/resources/configuration.properties.sample %{buildroot}%{rudderdir}/etc/rudder-web.properties
 cp %{_sourcedir}/rudder-sources/rudder/rudder-web/src/main/resources/logback.xml %{buildroot}%{rudderdir}/etc/
 
-cp %{_builddir}/rudder-sources/rudder/rudder-web/target/rudder-web*.war %{buildroot}%{rudderdir}/jetty7/webapps/rudder.war
+cp %{_builddir}/rudder-sources/rudder/rudder-web/target/rudder-web*.war %{buildroot}%{rudderdir}/share/webapps/rudder.war
 
 cp -rf %{_sourcedir}/rudder-sources/rudder/rudder-web/src/main/resources/load-page %{buildroot}%{rudderdir}/share/
 cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/test/resources/script/cfe-red-button.sh %{buildroot}%{rudderdir}/bin/
@@ -159,19 +210,44 @@ cp %{_sourcedir}/rudder-sources/rudder/rudder-web/src/main/resources/rudder-apac
 cp %{_sourcedir}/rudder-sources/rudder/rudder-web/src/main/resources/rudder-vhost.conf %{buildroot}/etc/%{apache_vhost_dir}/rudder-vhost.conf
 cp %{_sourcedir}/rudder-sources/rudder/rudder-web/src/main/resources/rudder-vhost-ssl.conf %{buildroot}/etc/%{apache_vhost_dir}/rudder-vhost-ssl.conf
 cp %{_sourcedir}/rudder-sources/rudder/rudder-web/src/main/resources/apache2-sysconfig %{buildroot}/etc/sysconfig/rudder-apache
-cp %{SOURCE2} %{buildroot}%{rudderdir}/jetty7/contexts/
-cp %{SOURCE3} %{buildroot}%{rudderdir}/etc/
 
-# Install upgrade tools
+install -m 644 %{SOURCE2} %{buildroot}%{rudderdir}/share/webapps/
+
+# Copy stub rudder-networks*.conf
+cp %{SOURCE3} %{buildroot}%{rudderdir}/etc/
+cp %{SOURCE4} %{buildroot}%{rudderdir}/etc/
+
+%if 0%{?sles_version}
+# On SLES, change the Apache DocumentRoot to the OS default
+sed -i "s%^DocumentRoot /var/www$%DocumentRoot /srv/www%" %{buildroot}%{rudderdir}/etc/rudder-apache-common.conf
+%endif
+
+# Install upgrade tools and migration scripts
+
+## SQL
+cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/Migration/dbMigration-change-ids-in-tables.sql %{buildroot}%{rudderdir}/share/upgrade-tools/
+cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/Migration/dbMigration-migrate-reports-per-node.sql %{buildroot}%{rudderdir}/share/upgrade-tools/
 cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/Migration/dbMigration-2.4-2.4-set-migration-needed-flag-for-EventLog.sql %{buildroot}%{rudderdir}/share/upgrade-tools/
+cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/Migration/dbMigration-2.6-2.6-index-reports.sql %{buildroot}%{rudderdir}/share/upgrade-tools/
 cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/Migration/dbMigration-2.6-2.7-set-migration-needed-flag-for-EventLog.sql %{buildroot}%{rudderdir}/share/upgrade-tools/
-cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/Migration/dbMigration-2.8-2.9-set-migration-needed-flag-for-EventLog.sql %{buildroot}%{rudderdir}/share/upgrade-tools/
 cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/Migration/dbMigration-2.7-2.8-add-nodes-executions-storage.sql %{buildroot}%{rudderdir}/share/upgrade-tools/
+cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/Migration/dbMigration-2.8-2.9-set-migration-needed-flag-for-EventLog.sql %{buildroot}%{rudderdir}/share/upgrade-tools/
+cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/Migration/dbMigration-2.11-2.12-add-nodeconfigids-columns.sql %{buildroot}%{rudderdir}/share/upgrade-tools/
+
+## LDAP
 cp %{_sourcedir}/rudder-upgrade-LDAP-schema-2.6-2.7-add-global-parameter-ou.ldif %{buildroot}%{rudderdir}/share/upgrade-tools/
 cp %{_sourcedir}/rudder-upgrade-LDAP-schema-2.6-2.7-add-default-global-parameter.ldif %{buildroot}%{rudderdir}/share/upgrade-tools/
-cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/Migration/dbMigration-2.6-2.6-index-reports.sql %{buildroot}%{rudderdir}/share/upgrade-tools/
+cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/Migration/ldapMigration-2.10-2.11-add-server-roles.ldif %{buildroot}%{rudderdir}/share/upgrade-tools/
+cp %{_sourcedir}/rudder-sources/rudder/rudder-core/src/main/resources/Migration/ldapMigration-2.10-2.11-add-node-without-role-group.ldif %{buildroot}%{rudderdir}/share/upgrade-tools/
 
 cp %{SOURCE5} %{buildroot}%{rudderdir}/bin/
+cp %{SOURCE6} %{buildroot}%{rudderdir}/bin/
+
+install -m 644 %{SOURCE7} %{buildroot}/opt/rudder/etc/server-roles.d/
+cp %{SOURCE13} %{buildroot}%{rudderdir}/etc/
+
+install -m 755 %{SOURCE15} %{buildroot}%{ruddervardir}/configuration-repository/ncf/ncf-hooks.d/
+install -m 755 %{SOURCE16} %{buildroot}%{ruddervardir}/configuration-repository/ncf/ncf-hooks.d/
 
 # Install documentation
 cp -rf %{_builddir}/rudder-doc/pdf %{buildroot}/usr/share/doc/rudder
@@ -187,19 +263,23 @@ cp -rf %{_builddir}/rudder-doc/html %{buildroot}/usr/share/doc/rudder
 # Post Installation
 #=================================================
 
+# Currently, we assume that the server where the webapp is installed
+# is the root server. Force the UUID.
+echo 'root' > /opt/rudder/etc/uuid.hive
+
 echo -n "INFO: Setting Apache HTTPd as a boot service..."
-/sbin/chkconfig --add %{apache} 2&> /dev/null
-%if 0%{?rhel} >= 6
-/sbin/chkconfig %{apache} on
+chkconfig --add %{apache} 2&> /dev/null
+%if 0%{?rhel} && 0%{?rhel} >= 6
+chkconfig %{apache} on
 %endif
 echo " Done"
 
-echo -n "INFO: Restrating syslog..."
-%{sysloginitscript} restart > /dev/null
+echo -n "INFO: Restarting syslog..."
+service %{syslogservicename} restart > /dev/null
 echo " Done"
 
 echo -n "INFO: Stopping Apache HTTPd..."
-/sbin/service %{apache} stop >/dev/null 2>&1
+service %{apache} stop >/dev/null 2>&1
 echo " Done"
 
 # Do this ONLY at first install
@@ -213,6 +293,20 @@ then
 		touch /var/rudder/configuration-repository/shared-files/.placeholder
 		cp -a %{rudderdir}/share/techniques /var/rudder/configuration-repository/
 		ncf init /var/rudder/configuration-repository/ncf
+fi
+
+# Create the configuration-repository group if it does not exist
+if ! getent group %{config_repository_group} > /dev/null; then
+  echo -n "INFO: Creating group %{config_repository_group}..."
+  groupadd --system %{config_repository_group}
+  echo " Done"
+fi
+
+# Add the ncf-api-venv user to this group
+if ! getent group %{config_repository_group} | grep -q ncf-api-venv > /dev/null; then
+  echo -n "INFO: Adding ncf-api-venv to the %{config_repository_group} group..."
+  usermod -%{usermod_opt} %{config_repository_group} ncf-api-venv
+  echo " Done"
 fi
 
 # Add required includes in the SLES apache2 configuration
@@ -279,7 +373,7 @@ if [ ! -f /opt/rudder/etc/ssl/rudder-webapp.crt ] || [ ! -f /opt/rudder/etc/ssl/
 fi
 
 echo -n "INFO: Starting Apache HTTPd..."
-/sbin/service %{apache} start >/dev/null 2>&1
+service %{apache} start >/dev/null 2>&1
 echo " Done"
 
 # Run any upgrades
@@ -299,13 +393,75 @@ if [ ! -d /var/rudder/configuration-repository/ncf ]; then
 	ncf init /var/rudder/configuration-repository/ncf
 fi
 
+# Go into configuration-repository to manage git
+cd /var/rudder/configuration-repository
+
+# Initialize git repository if it is missing, so permissions can be set on it afterwards
+if [ ! -d /var/rudder/configuration-repository/.git ]; then
+
+  git init --shared=group
+
+  # Specify default git user name and email (git will refuse to commit without them)
+  git config user.name "root user (CLI)"
+  git config user.email "root@localhost"
+
+  git add .
+  git commit -m "initial commit"
+
+else
+
+  # This should have been set during repository initialization, but might need to be
+  # added if we are upgrading an existing repository
+  if [ $(git config --get-regexp "user.name|user.email"|wc -l) -ne 2 ]; then
+    git config user.name "root user (CLI)"
+    git config user.email "root@localhost"
+  fi
+
+  # Set shared repository value to group if not set
+  if ! git config core.sharedRepository >/dev/null 2>&1; then
+    git config core.sharedRepository group
+  fi
+
+fi
+
+# Adjust permissions on /var/rudder/configuration-repository
+chgrp -R %{config_repository_group} /var/rudder/configuration-repository
+
+## Add execution permission for ncf-api only on directories and files with user execution permission
+chmod -R u+rwX,g+rwsX %{ruddervardir}/configuration-repository/.git
+chmod -R u+rwX,g+rwsX %{ruddervardir}/configuration-repository/ncf
+chmod -R u+rwX,g+rwsX %{ruddervardir}/configuration-repository/techniques
+
+## Add execution permission for ncf-apo on pre/post-hooks
+chmod -R 2750 %{ruddervardir}/configuration-repository/ncf/ncf-hooks.d/
+
+# Create a symlink to the Jetty context if necessary
+if [ -d "%{rudderdir}/jetty7/contexts" ]; then
+  ln -sf %{rudderdir}/share/webapps/rudder.xml %{rudderdir}/jetty7/contexts/rudder.xml
+fi
+
 # Warn the user that Jetty needs restarting. This can't be done automatically due to a bug in Jetty's init script.
 # See http://www.rudder-project.org/redmine/issues/2807
 echo "********************************************************************************"
 echo "rudder-webapp has been upgraded, but for the upgrade to take effect, please"
 echo "restart the jetty application server as follows:"
-echo "# /sbin/service rudder-jetty restart"
+echo "# service rudder-jetty restart"
 echo "********************************************************************************"
+
+%postun -n rudder-webapp
+#=================================================
+# Post Uninstallation
+#=================================================
+
+# Do it only during uninstallation
+if [ $1 -eq 0 ]; then
+  if getent group %{config_repository_group} > /dev/null; then
+    # Remove the configuration-repository group
+    echo -n "INFO: Removing group %{config_repository_group}..."
+    groupdel %{config_repository_group}
+    echo " Done"
+  fi
+fi
 
 #=================================================
 # Cleaning
@@ -323,23 +479,34 @@ rm -rf %{buildroot}
 %config(noreplace) %{rudderdir}/etc/rudder-web.properties
 %config(noreplace) %{rudderdir}/etc/rudder-users.xml
 %config(noreplace) %{rudderdir}/etc/logback.xml
+%config(noreplace) %{rudderdir}/etc/rudder-passwords.conf
+%attr(0600, root, root) %{rudderdir}/etc/rudder-passwords.conf
+# Prevent /opt/rudder/jetty7/contexts/rudder.xml to be erased during upgrade
+%ghost %{rudderdir}/jetty7/contexts/rudder.xml
+
 %{rudderdir}/bin/
-%{rudderdir}/jetty7/webapps/
-%{rudderdir}/jetty7/rudder-plugins/
-%{rudderdir}/jetty7/contexts/rudder.xml
+%{rudderdir}/bin/rudder-node-to-relay
+%{rudderdir}/bin/rudder-init
+%{rudderdir}/bin/rudder-init.sh
+%{rudderdir}/bin/rudder-root-rename
+%{rudderdir}/share/webapps/
+%{rudderdir}/share/rudder-plugins/
 %{rudderdir}/share
 %{ruddervardir}/inventories/accepted-nodes-updates
 %{ruddervardir}/inventories/incoming
 %{ruddervardir}/inventories/received
 %{ruddervardir}/inventories/failed
+%{ruddervardir}/configuration-repository/ncf/ncf-hooks.d
 %{rudderlogdir}/apache2/
 /etc/%{apache_vhost_dir}/
 %config(noreplace) %{rudderdir}/etc/rudder-apache-common.conf
 %config(noreplace) /etc/%{apache_vhost_dir}/rudder-vhost.conf
 %config(noreplace) /etc/%{apache_vhost_dir}/rudder-vhost-ssl.conf
 %config(noreplace) %{rudderdir}/etc/rudder-networks.conf
+%config(noreplace) %{rudderdir}/etc/rudder-networks-24.conf
 %config(noreplace) /etc/sysconfig/rudder-apache
 /usr/share/doc/rudder
+%{rudderdir}/bin/rudder-upgrade-database
 
 #=================================================
 # Changelog

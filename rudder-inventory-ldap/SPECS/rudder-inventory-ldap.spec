@@ -37,13 +37,15 @@
 %define openldap_release 2.4.23
 
 %if 0%{?sles_version} 
-%define sysloginitscript /etc/init.d/syslog
+%define syslogservicename syslog
 %endif
-%if 0%{?el5} 
-%define sysloginitscript /etc/init.d/syslog
+
+%if 0%{?rhel} == 5 || 0%{?el5}
+%define syslogservicename syslog
 %endif
-%if 0%{?el6} 
-%define sysloginitscript /etc/init.d/rsyslog
+
+%if 0%{?rhel} && 0%{?rhel} > 5
+%define syslogservicename rsyslog
 %endif
 
 #=================================================
@@ -65,24 +67,39 @@ Source3: slapd.conf
 Source4: inventory.schema
 Source5: rudder.schema
 Source6: DB_CONFIG
+Source7: rudder-inventory-ldap
+Source8: rudder-ldap
+# This file will contain path of /opt/rudder/lib for ld which will
+# find there all necessary libraries for BerkeleyDB.
+Source9: rudder-inventory-ldap.conf
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-#Generic requirement
+#Generic requirements
+
 BuildRequires: gcc cyrus-sasl-devel
 Requires: rsyslog cyrus-sasl openssl
-#Specific requirement
-%if 0%{?sles_version} == 11
-BuildRequires: libdb-4_5-devel libopenssl-devel
-Requires: libdb-4_5
-%endif
-%if 0%{?sles_version} == 10
+
+#Specific requirements
+
+%if 0%{?sles_version} && 0%{?sles_version} == 10
 BuildRequires: db42-devel openssl-devel
 Requires: db42
 %endif
-%if 0%{?rhel}
+
+%if 0%{?sles_version} && 0%{?sles_version} == 11
+BuildRequires: libdb-4_5-devel libopenssl-devel
+Requires: libdb-4_5
+%endif
+
+%if 0%{?rhel} && 0%{?rhel} < 7
 BuildRequires: db4-devel openssl-devel libtool-ltdl-devel
 Requires: db4
+%endif
+
+%if 0%{?rhel} && 0%{?rhel} >= 7
+BuildRequires: libdb-devel openssl-devel libtool-ltdl-devel
+Requires: libdb
 %endif
 
 %description
@@ -103,34 +120,60 @@ rudder-agent package installed) and for configuration rules and parameters.
 #=================================================
 %prep
 
+cp -rf %{_sourcedir}/berkeleydb-source %{_builddir}
 cp -rf %{_sourcedir}/openldap-source %{_builddir}
 
 #=================================================
 # Building
 #=================================================
 %build
-cd openldap-source
 
 # Ensure an appropriate environment for the compiler
 export CFLAGS="$RPM_OPT_FLAGS"
 export CXXFLAGS="$RPM_OPT_FLAGS"
 
-./configure --build=%_target --prefix=%{rudderdir} --enable-dynamic --enable-debug --enable-modules --enable-hdb=mod --enable-monitor=mod --enable-dynlist=mod --with-cyrus-sasl
+# 1 - BerkeleyDB
+cd berkeleydb-source/build_unix/
+../dist/configure --build=%_target --prefix=%{rudderdir}
+
+make %{?_smp_mflags}
+make install
+
+cd ../..
+
+# 2 - OpenLDAP
+cd openldap-source
+
+export LD_LIBRARY_PATH="/opt/rudder/lib"
+export CPPFLAGS="-I/opt/rudder/include"
+export LDFLAGS="-L/opt/rudder/lib"
+export LIBS="-L/opt/rudder/lib"
+
+./configure --build=%_target --prefix=%{rudderdir} --libdir=%{rudderdir}/lib/ldap --enable-dynamic --enable-debug --enable-modules --enable-hdb=mod --enable-monitor=mod --enable-dynlist=mod --with-cyrus-sasl
 
 make %{?_smp_mflags} depend
 make %{?_smp_mflags}
+
 #=================================================
 # Installation
 #=================================================
 %install
 rm -rf %{buildroot}
 
-mkdir -p %{buildroot}/opt/rudder
+mkdir -p %{buildroot}/etc/ld.so.conf.d
+mkdir -p %{buildroot}/opt/rudder/
+mkdir -p %{buildroot}/opt/rudder/etc/server-roles.d/
 mkdir -p %{buildroot}%{rudderlogdir}/ldap
 mkdir -p %{buildroot}/var/rudder/ldap/openldap-data
 mkdir -p %{buildroot}/var/rudder/run
 
-cd openldap-source && make install DESTDIR=%{buildroot}
+# Now, we install BerkeleyDB in %{buildroot} to package it
+cd berkeleydb-source/build_unix && make install DESTDIR=%{buildroot}
+
+cd ../../openldap-source && make install DESTDIR=%{buildroot}
+
+# Remove useless BerkeleyDB documentation
+rm -rf %{buildroot}/opt/rudder/docs
 
 # Init script
 mkdir -p %{buildroot}/etc/init.d
@@ -142,6 +185,13 @@ install -m 644 %{SOURCE3} %{buildroot}/opt/rudder/etc/openldap/slapd.conf
 install -m 644 %{SOURCE4} %{buildroot}/opt/rudder/etc/openldap/schema/
 install -m 644 %{SOURCE5} %{buildroot}/opt/rudder/etc/openldap/schema/
 install -m 644 %{SOURCE6} %{buildroot}/var/rudder/ldap/openldap-data/
+
+install -m 644 %{SOURCE7} %{buildroot}/opt/rudder/etc/server-roles.d/
+install -m 644 %{SOURCE8} %{buildroot}/opt/rudder/etc/server-roles.d/
+
+# Install /etc/ld.so.conf.d/rudder.conf in order to use libraries
+# contained in /opt/rudder/lib like BerkeleyDB
+install -m 644 %{SOURCE9} %{buildroot}/etc/ld.so.conf.d/rudder-inventory-ldap.conf
 
 # Syslog configuration
 mkdir -p %{buildroot}/etc/rsyslog.d
@@ -156,6 +206,7 @@ cp %{_sourcedir}/rsyslog/rudder-slapd.conf %{buildroot}/etc/rsyslog.d/rudder-sla
 # Only do this on package upgrade
 if [ $1 -gt 1 ]
 then
+
 	# When upgrading OpenLDAP, we may need to dump the database
 	# so that it can be restored from LDIF in case the new
 	# package uses a different version of BerkeleyDB (libdb)
@@ -175,15 +226,21 @@ fi
 # Post Installation
 #=================================================
 
+# Reload the linker cache (to acknowledge BerkeleyDB's presence if needed)
+if [ -f /etc/ld.so.conf.d/rudder-inventory-ldap.conf ]; then
+        ldconfig
+fi
+
 echo -n "INFO: Setting rudder-slapd as a boot service..."
-/sbin/chkconfig --add rudder-slapd >/dev/null 2>&1
-%if 0%{?rhel} >= 6
-/sbin/chkconfig rudder-slapd on
+chkconfig --add rudder-slapd >/dev/null 2>&1
+
+%if 0%{?rhel} && 0%{?rhel} >= 6
+chkconfig rudder-slapd on
 %endif
 echo " Done"
 
 echo -n "INFO: Reloading syslogd... "
-%{sysloginitscript} restart >/dev/null 2>&1
+service %{syslogservicename} restart >/dev/null 2>&1
 echo " Done"
 
 RUDDER_SHARE=/opt/rudder/share
@@ -192,7 +249,7 @@ BACKUP_LDIF_PATH=/var/rudder/ldap/backup/
 BACKUP_LDIF_REGEX="^/var/rudder/ldap/backup/openldap-data-pre-upgrade-\([0-9]\{14\}\)\.ldif$"
 
 # Do we have a backup file from a previous upgrade?
-BACKUP_LDIF=`find ${BACKUP_LDIF_PATH} -regextype sed -regex "${BACKUP_LDIF_REGEX}" >/dev/null 2>&1 | sort -nr | head -n1`
+BACKUP_LDIF=`find ${BACKUP_LDIF_PATH} -regextype sed -regex "${BACKUP_LDIF_REGEX}" 2>&1 | sort -nr | head -n1`
 if [ "z${BACKUP_LDIF}" != "z" ]; then
 	TIMESTAMP=`echo ${BACKUP_LDIF} | sed "s%${BACKUP_LDIF_REGEX}%\1%"`
 
@@ -213,14 +270,14 @@ if [ "z${BACKUP_LDIF}" != "z" ]; then
 	if [ "z${REINIT_DB}" = "zyes" ]; then
 		# Do we have a database backup to restore from?
 		if [ ! -f ${BACKUP_LDIF} ]; then
-			echo >&2 "ERROR: No database backup for old version. Can't upgrade rudder-inventory-ldap database!"
+			echo >&2 "ERROR: No database backup for old version. Can't upgrade rudder-inventory-ldap database..."
 			exit 1
 		fi
 
 		# Stop OpenLDAP - use forcestop to avoid the init script failing
 		# when trying to do the backup with bad libdb versions
 		echo -n "INFO: Stopping rudder-slapd..."
-		/sbin/service rudder-slapd forcestop >/dev/null 2>&1
+		service rudder-slapd forcestop >/dev/null 2>&1
 		echo " Done"
 
 		# Backup the old database
@@ -233,7 +290,7 @@ if [ "z${BACKUP_LDIF}" != "z" ]; then
 
 		# Start OpenLDAP
 		echo -n "INFO: Starting rudder-slapd..."
-		/sbin/service rudder-slapd start >/dev/null 2>&1
+		service rudder-slapd start >/dev/null 2>&1
 		echo " Done"
 
 		echo "INFO: OpenLDAP database was successfully upgraded to new format"
@@ -250,7 +307,7 @@ if [ -r /opt/rudder/etc/openldap/slapd.conf -a -e /var/rudder/ldap/openldap-data
 	ls  /var/rudder/ldap/openldap-data/*.bdb | xargs -n 1 -I{} basename {} .bdb | sort | egrep -v '^(dn2id|id2entry)' > ${SLAPD_ACTUAL_INDEXES}
 	if ! diff ${SLAPD_DEFINED_INDEXES} ${SLAPD_ACTUAL_INDEXES} > /dev/null; then
 		echo -n "INFO: OpenLDAP indexes are not up to date, reindexing..."
-		/sbin/service rudder-slapd stop >/dev/null 2>&1
+		service rudder-slapd stop >/dev/null 2>&1
 		/opt/rudder/sbin/slapindex >/dev/null 2>&1
 		echo " Done"
 	fi
@@ -260,7 +317,7 @@ rm -f ${SLAPD_DEFINED_INDEXES} ${SLAPD_ACTUAL_INDEXES}
 
 # Need to restart to take schema changes into account
 echo -n "INFO: Restarting rudder-slapd..."
-/sbin/service rudder-slapd restart >/dev/null 2>&1
+service rudder-slapd restart >/dev/null 2>&1
 echo " Done"
 
 #=================================================
@@ -289,6 +346,7 @@ rm -rf %{buildroot}
 /etc/init.d/rudder-slapd
 %config(noreplace) /etc/default/rudder-slapd
 %config(noreplace) /opt/rudder/etc/openldap/slapd.conf
+%config(noreplace) /etc/ld.so.conf.d/rudder-inventory-ldap.conf
 
 #=================================================
 # Changelog

@@ -36,14 +36,16 @@
 
 %define maven_settings settings-external.xml
 
-%if 0%{?sles_version} 
-%define sysloginitscript /etc/init.d/syslog
+%if 0%{?sles_version}
+%define syslogservicename syslog
 %endif
-%if 0%{?el5} 
-%define sysloginitscript /etc/init.d/syslog
+
+%if 0%{?rhel} == 5 || 0%{?el5}
+%define syslogservicename syslog
 %endif
-%if 0%{?el6} 
-%define sysloginitscript /etc/init.d/rsyslog
+
+%if 0%{?rhel} && 0%{?rhel} > 5
+%define syslogservicename rsyslog
 %endif
 
 #=================================================
@@ -61,12 +63,28 @@ Group: Applications/System
 
 Source1: inventory-web.properties
 Source2: rudder-inventory-endpoint-upgrade
+Source3: rudder-inventory-endpoint
+Source4: endpoint.xml
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch: noarch
 
 BuildRequires: jdk >= 1.6
-Requires: rudder-jetty rudder-inventory-ldap
+Requires: rudder-inventory-ldap
+
+# Those are virtual packages provided by our Jetty package and the system one.
+%if 0%{?rhel}
+Requires: jetty-eclipse
+%endif
+
+%if 0%{?fedora}
+Requires: jetty-server
+%endif
+
+# No Jetty provided by SLES... Use our own.
+%if 0%{?sles_version}
+Requires: rudder-jetty
+%endif
 
 %description
 Rudder is an open source configuration management and audit solution.
@@ -102,14 +120,18 @@ cd %{_builddir}/rudder-sources/ldap-inventory/inventory-provisioning-web && %{_s
 %install
 rm -rf %{buildroot}
 
-mkdir -p %{buildroot}/opt/rudder/jetty7/webapps/
 mkdir -p %{buildroot}/opt/rudder/etc/
+mkdir -p %{buildroot}/opt/rudder/etc/server-roles.d/
 mkdir -p %{buildroot}%{rudderdir}/bin/
+mkdir -p %{buildroot}/opt/rudder/share/webapps/
 
-cp %{_builddir}/rudder-sources/ldap-inventory/inventory-provisioning-web/target/inventory-provisioning-web*.war %{buildroot}/opt/rudder/jetty7/webapps/endpoint.war
+cp %{_builddir}/rudder-sources/ldap-inventory/inventory-provisioning-web/target/inventory-provisioning-web*.war %{buildroot}/opt/rudder/share/webapps/endpoint.war
 cp %{SOURCE1} %{buildroot}/opt/rudder/etc/
 cp %{SOURCE2} %{buildroot}%{rudderdir}/bin/
 
+install -m 644 %{SOURCE3} %{buildroot}/opt/rudder/etc/server-roles.d/
+
+install -m 644 %{SOURCE4} %{buildroot}%{rudderdir}/share/webapps/
 
 %pre -n rudder-inventory-endpoint
 #=================================================
@@ -121,13 +143,18 @@ cp %{SOURCE2} %{buildroot}%{rudderdir}/bin/
 # Post Installation
 #=================================================
 
+# Create a symlink to the Jetty context if necessary
+if [ -d "%{rudderdir}/jetty7/contexts" ]; then
+  ln -sf %{rudderdir}/share/webapps/endpoint.xml %{rudderdir}/jetty7/contexts/endpoint.xml
+fi
+
 # Run any upgrades
 echo "INFO: Launching script to check if a migration is needed"
 %{rudderdir}/bin/rudder-inventory-endpoint-upgrade
 echo "INFO: End of migration script"
 
 echo "Restarting syslogd ..."
-%{sysloginitscript} restart
+service %{syslogservicename} restart
 
 #=================================================
 # Cleaning
@@ -140,7 +167,7 @@ rm -rf %{buildroot}
 #=================================================
 %files -n rudder-inventory-endpoint
 %defattr(-, root, root, 0755)
-%{rudderdir}/jetty7/webapps/
+%{rudderdir}/share/webapps/
 %{rudderdir}/bin/
 %{rudderdir}/etc/
 %config(noreplace) /opt/rudder/etc/inventory-web.properties

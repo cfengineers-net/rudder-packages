@@ -35,10 +35,13 @@
 %define ruddervardir         /var/rudder
 %define rudderlogdir         /var/log/rudder
 
-# is_tokyocabinet_here checks if to build CFEngine we will need to build 
-# Tokyocabinet or if a package already exists on the system.
-# Default value is true in order to handle cases which are not caught below
-%define is_tokyocabinet_here true
+# use_system_lmdb checks if to build CFEngine we will need to build LMDB or if
+# a package already exists on the system.
+# Default value is true in order to handle cases which are not caught below.
+%define use_system_lmdb true
+
+# Same goes for the use of the local OpenSSL install vs. a bundled one
+%define use_system_openssl true
 
 #=================================================
 # Header
@@ -59,7 +62,7 @@ Source3: run-inventory
 Source4: uuid.hive
 Source5: rudder-agent.cron
 # This file will contain path of /opt/rudder/lib for ld which will
-# find there all necessary libraries for tokyocabinet.
+# find there all necessary libraries for LMDB.
 Source6: rudder.conf
 Source7: check-rudder-agent
 Source8: vzps.py
@@ -72,31 +75,34 @@ Source11: rudder-perl
 Source100: uuidgen
 %endif
 
-# We have PERL things in here. Do not try to outsmart me by adding dummy dependencies, you silly tool.
+# Prevent dependency auto-generation, that tries to be helpful by detecting Perl dependencies from
+# FusionInventory. We handle that with the perl standalone installation already.
 AutoReq: 0
 AutoProv: 0
 
-%if 0%{?rhel} == 4
+%if 0%{?rhel} && 0%{?rhel} == 4
 Patch1: fix-missing-headers
 %endif
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-#Generic requirement
-BuildRequires: gcc openssl-devel bison flex pcre-devel
-Requires: pcre openssl
+# Generic requirements
+BuildRequires: gcc bison flex pcre-devel autoconf automake libtool
+Requires: pcre
+Provides: rudder-agent
+Conflicts: rudder-agent-thin
 
 # Specific requirements
 
 ## For EL and Fedora
 %if 0%{?rhel} || 0%{?fedora}
 BuildRequires: make byacc
-Requires: crontabs
+Requires: crontabs net-tools
 %endif
 
 ## For SLES
 %if 0%{?sles_version}
-Requires: cron
+Requires: cron net-tools
 %endif
 
 # dmiecode is provided in the "dmidecode" package on EL4+ and on kernel-utils
@@ -116,41 +122,87 @@ Requires: kernel-utils
 Requires: dmidecode
 %endif
 
-## Each tests of OS version comparison with "greater" or "lesser version than"
-## need to test before if we compare the right OS.
-%if 0%{?rhel} && 0%{?rhel} <= 5
-BuildRequires: bzip2-devel zlib-devel
-%define is_tokyocabinet_here false
+# LMDB handling (builtin or OS-provided)
+
+## 1 - RHEL: No LMDB yet
+%if 0%{?rhel}
+%define use_system_lmdb false
 %endif
 
-%if 0%{?rhel} && 0%{?rhel} >= 6
-BuildRequires: tokyocabinet-devel
-Requires: tokyocabinet
-%define is_tokyocabinet_here true
+## 2 - Fedora: No LMDB yet
+%if 0%{?fedora}
+%define use_system_lmdb false
 %endif
 
-# Fedora 7 is the first known version to officially
-# support TokyoCabinet in the official repositories
-%if 0%{?fedora} && 0%{?fedora} >= 7
-BuildRequires: tokyocabinet-devel
-Requires: tokyocabinet
-%define is_tokyocabinet_here true
-%endif
-
-%if 0%{?sles_version} && 0%{?sles_version} >= 11
-BuildRequires: libbz2-devel zlib-devel
+## 3 - SLES: No LMDB yet
+%if 0%{?sles_version}
 Requires: pmtools
-%define is_tokyocabinet_here false
+%define use_system_lmdb false
 %endif
 
-## Contents of package 'libbz2-devel' in SLES 11 is included in the package of bzip2
-## in SLES 10 which is on the system by default.
-## cf http://linux.derkeiler.com/Mailing-Lists/SuSE/2003-11/2640.html
-%if 0%{?sles_version} == 10
-BuildRequires: zlib-devel
-Requires: pmtools
-%define is_tokyocabinet_here false
+## 4 - AIX: No LMDB yet
+%if "%{?_os}" == "aix"
+%define use_system_lmdb false
 %endif
+
+# OpenSSL handling (builtin or OS-provided)
+#
+# We build and use a bundled version of OpenSSL
+# on OSes which are not maintained anymore as part
+# of their "main" support phase.
+#
+# See. http://www.rudder-project.org/redmine/issues/5147
+
+## 1 - RHEL: Bundled for pre-el5 oses
+##
+### Pre el5 have reached the end of production phase,
+### and are thus in Extended Life phase.
+### See. https://access.redhat.com/support/policy/updates/errata/
+##
+%if 0%{?rhel} && 0%{?rhel} < 5
+%define use_system_openssl false
+%else
+%define use_system_openssl true
+%endif
+
+## 2 - Fedora: Use the system one
+##
+### We work with Fedora 18 onwards, it
+### comes with OpenSSL 1.0.1e, which is
+### recent enough.
+##
+%if 0%{?fedora}
+%define use_system_openssl true
+%endif
+
+## 3 - SLES: Bundled for pre-sles11 oses
+##
+### SLES 11 OSes come with OpenSSL 0.9.8h,
+### which is recent enough.
+##
+%if 0%{?sles_version} && 0%{?sles_version} < 11
+%define use_system_openssl false
+%else
+%define use_system_openssl true
+%endif
+
+## 4 - AIX: Bundled
+##
+### We do not want to rely on external
+### implementations of OpenSSL on AIX to
+### reduce dependencies on the base system.
+##
+%if "%{?_os}" == "aix"
+%define use_system_openssl false
+%endif
+
+## 5 - Resulting dependencies
+%if "%{use_system_openssl}" == "true"
+BuildRequires: openssl-devel
+Requires: openssl
+%endif
+
+# Common commands
 
 %define install_command        install
 %define cp_a_command           cp -a
@@ -164,15 +216,12 @@ Requires: pmtools
 Provides: rudder-cfengine-community
 Obsoletes: rudder-cfengine-community
 
-# We have PERL things in here. Do not try to outsmart me by adding dummy dependencies, you silly tool.
-# Same for TokyoCabinet, don't require the libs when we bundle them in this package, duh.
-AutoProv: 0
+# Use our own dependency generator
 %global _use_internal_dependency_generator 0
 %global __find_requires_orig %{__find_requires}
-%define __find_requires %{_sourcedir}/filter-reqs.pl %{is_tokyocabinet_here} %{__find_requires_orig}
+%define __find_requires %{_sourcedir}/filter-reqs.pl %{use_system_lmdb} %{__find_requires_orig}
 %global __find_provides_orig %{__find_provides}
-%define __find_provides %{_sourcedir}/filter-reqs.pl %{is_tokyocabinet_here} %{__find_provides_orig}
-
+%define __find_provides %{_sourcedir}/filter-reqs.pl %{use_system_lmdb} %{__find_provides_orig}
 
 %description
 Rudder is an open source configuration management and audit solution.
@@ -185,7 +234,7 @@ FusionInventory.
 # Source preparation
 #=================================================
 %prep
-%if 0%{?rhel} == 4
+%if 0%{?rhel} && 0%{?rhel} == 4
 %patch1 -p1
 %endif
 
@@ -202,27 +251,55 @@ cd %{_sourcedir}
 export CFLAGS="$RPM_OPT_FLAGS"
 export CXXFLAGS="$RPM_OPT_FLAGS"
 
-%if "%{is_tokyocabinet_here}" != "true"
-# Remove all remaining files from temporary build folder before to compile tokyocabinet
-rm -rf %{buildroot}
-# Compile Tokyocabinet library and install it in /opt/rudder/lib
-cd %{_sourcedir}/tokyocabinet-source
-./configure --prefix=%{rudderdir}
+%if "%{use_system_openssl}" != "true"
+# Compile and install OpenSSL
+cd %{_sourcedir}/openssl-source
+./config -fPIC --prefix=%{rudderdir} --openssldir=%{rudderdir}/openssl shared
 make %{?_smp_mflags}
-make install DESTDIR=%{buildroot}
+make install
+%endif
+
+%if "%{use_system_lmdb}" != "true"
+# Remove all remaining files from the temporary build folder before compiling LMDB
+rm -rf %{buildroot}
+
+# Compile LMDB library and install it in /opt/rudder/lib
+
+# LMDB's Makefile does not know how to create destination files, do it ourselves
+for i in bin lib include man/man1; do mkdir -p %{rudderdir}/$i; done
+
+cd %{_sourcedir}/lmdb-source/libraries/liblmdb
+
+make %{?_smp_mflags}
+
+# First install goes to the local %{rudderdir} to prevent linking issues during
+# CFEngine build
+make install prefix=%{rudderdir}
 %endif
 
 # Prepare CFEngine build
 cd %{_sourcedir}/cfengine-source
 
-%if "%{is_tokyocabinet_here}" != "true"
-## Define path of tokyocabinet if built before instead of being provided by the system.
-%define tokyocabinet_arg "--with-tokyocabinet=%{buildroot}%{rudderdir}"
+%if "%{use_system_openssl}" != "true"
+## Define path of OpenSSL if built before instead of being provided by the system.
+%define openssl_arg "--with-openssl=%{rudderdir}"
 %else
-%define tokyocabinet_arg ""
+%define openssl_arg ""
 %endif
 
-./configure --build=%_target --prefix=%{rudderdir} --with-workdir=%{ruddervardir}/cfengine-community --enable-static=yes --enable-shared=no %{tokyocabinet_arg}
+%if "%{use_system_lmdb}" != "true"
+## Define path of LMDB if built before instead of being provided by the system.
+%define lmdb_arg "--with-lmdb=%{rudderdir}"
+%else
+%define lmdb_arg ""
+%endif
+
+# If there is no configure, bootstrap with autogen.sh first
+if [ ! -x ./configure ]; then
+  NO_CONFIGURE=1 ./autogen.sh
+fi
+
+./configure --build=%_target --prefix=%{rudderdir} --with-workdir=%{ruddervardir}/cfengine-community --enable-static=yes --enable-shared=no %{openssl_arg} %{lmdb_arg}
 
 make %{?_smp_mflags}
 
@@ -230,14 +307,29 @@ make %{?_smp_mflags}
 # Installation
 #=================================================
 %install
-%if "%{is_tokyocabinet_here}" == "true"
+%if "%{use_system_lmdb}" == "true"
 # Remove all remaining files from temporary build folder since no actions should
-# have been made before in this directory (if tokyocabinet has not been
-# built).
+# have been made before in this directory (if LMDB has not been built).
 # Besides, all actions should not have been made before macro 'install', so removing all 
 # the files from %{buildroot} should be made at the begining of macro 'install'.
-# Build of and embeded library (here, tokyocabinet)is an exception.
+# Build of and embedded library (here, LMDB) is an exception.
 rm -rf %{buildroot}
+%else
+
+# Reinstall LMDB because RPM rm -rf %{buildroot} for a reason I don't understand
+# TODO: Fix this nasty hack!
+
+# LMDB's Makefile does not know how to create destination files, do it ourselves
+for i in bin lib include man/man1; do mkdir -p %{buildroot}%{rudderdir}/$i; done
+cd %{_sourcedir}/lmdb-source/libraries/liblmdb
+
+# Now, we install lmdb in %{buildroot} to package it
+make install prefix=%{rudderdir} DESTDIR=%{buildroot}
+%endif
+
+%if "%{use_system_openssl}" != "true"
+cd %{_sourcedir}/openssl-source
+make install INSTALL_PREFIX=%{buildroot}
 %endif
 
 cd %{_sourcedir}/cfengine-source
@@ -250,6 +342,7 @@ mkdir -p %{buildroot}%{ruddervardir}/cfengine-community/bin
 mkdir -p %{buildroot}%{ruddervardir}/cfengine-community/inputs
 mkdir -p %{buildroot}%{ruddervardir}/tmp
 mkdir -p %{buildroot}%{ruddervardir}/tools
+mkdir -p %{buildroot}%{rudderlogdir}/install
 
 # Init script
 # AIX does not use init scripts, instead we set up a subsystem in the post scriptlet below
@@ -280,11 +373,15 @@ cp -r %{_sourcedir}/initial-promises %{buildroot}%{rudderdir}/share/
 cp %{SOURCE4} %{buildroot}%{rudderdir}/etc/
 
 # ld.so.conf.d is not supported on CentOS 3
-%if "%{is_tokyocabinet_here}" != "true" && 0%{?rhel} != 3
+%if 0%{?rhel} != 3
+
+%if "%{use_system_lmdb}" != "true" || "%{use_system_openssl}" != "true"
 # Install /etc/ld.so.conf.d/rudder.conf in order to use libraries
-# contained in /opt/rudder/lib like tokyocabinet
+# contained in /opt/rudder/lib like LMDB or OpenSSL
 mkdir -p %{buildroot}/etc/ld.so.conf.d
 %{install_command} -m 644 %{SOURCE6} %{buildroot}/etc/ld.so.conf.d/rudder.conf
+%endif
+
 %endif
 
 %{install_command} -m 755 %{SOURCE7} %{buildroot}/opt/rudder/bin/check-rudder-agent
@@ -318,12 +415,15 @@ find %{buildroot}%{rudderdir} %{buildroot}%{ruddervardir} -type f -o -type l | s
 if [ $1 -eq 2 ];then
 %if "%{?_os}" != "aix"
 	# Keep a backup copy of Rudder agent init and cron files to prevent http://www.rudder-project.org/redmine/issues/3995
-	mkdir -p /var/backups/rudder
-	%{install_command} -m 755 /etc/init.d/rudder-agent /var/backups/rudder/rudder-agent.init-$(date +%Y%m%d) && echo "INFO: A back up copy of the /etc/init.d/rudder-agent has been created in /var/backups/rudder"
-	%{install_command} -m 644 /etc/default/rudder-agent /var/backups/rudder/rudder-agent.default-$(date +%Y%m%d) && echo "INFO: A back up copy of the /etc/default/rudder-agent has been created in /var/backups/rudder"
-	%{install_command} -m 644 /etc/cron.d/rudder-agent /var/backups/rudder/rudder-agent.cron-$(date +%Y%m%d) && echo "INFO: A back up copy of the /etc/cron.d/rudder-agent has been created in /var/backups/rudder"
+  for i in init.d default cron.d; do
+    if [ -f /etc/${i}/rudder-agent ]; then
+	    mkdir -p /var/backups/rudder
+      if [ "${i}" = "init.d" ]; then mode=755; else mode=644; fi
+	    %{install_command} -m ${mode} /etc/${i}/rudder-agent /var/backups/rudder/rudder-agent.$(basename ${i} .d)-$(date +%Y%m%d) && echo "INFO: A back up copy of /etc/${i}/rudder-agent has been created in /var/backups/rudder"
+    fi
+  done
 %else
-	echo "INFO: No init script / cron script backup necessary on AIX builds yet. Skipping...
+	echo "INFO: No init script / cron script backup necessary on AIX builds yet. Skipping..."
 %endif
 fi
 
@@ -331,6 +431,8 @@ fi
 #=================================================
 # Post Installation
 #=================================================
+
+echo "$(date) - Starting rudder-agent post installation script" >> %{rudderlogdir}/install/rudder-agent.log
 
 # Ensure our PATH includes Rudder's bin dir (for uuidgen on AIX in particular)
 export PATH=%{rudderdir}/bin/:$PATH
@@ -354,31 +456,40 @@ then
 	/usr/sbin/mkitab "rudder-agent:23456789:once:/usr/bin/startsrc -s rudder-agent"
 	# No need to tell init to re-read /etc/inittab, it does it automatically every 60 seconds
 %else
-	/sbin/chkconfig --add rudder-agent
+	chkconfig --add rudder-agent
 %endif
-	%if 0%{?rhel} >= 6
-	/sbin/chkconfig rudder-agent on
+	%if 0%{?rhel} && 0%{?rhel} >= 6
+	chkconfig rudder-agent on
 	%endif
 
 	CFRUDDER_FIRST_INSTALL=1
 fi
 
 # Reload configuration of ldd if new configuration has been added
-%if "%{is_tokyocabinet_here}" != "true" && 0%{?rhel} != 3
+%if 0%{?rhel} != 3
+
+%if "%{use_system_lmdb}" != "true" || "%{use_system_openssl}" != "true"
 if [ -f /etc/ld.so.conf.d/rudder.conf ]; then
 	ldconfig
 fi
 %endif
 
+%endif
+
 # Reload configuration of ldd if new configuration has been added,
 # CentOS 3 style.
-%if "%{is_tokyocabinet_here}" != "true" && 0%{?rhel} == 3
+%if 0%{?rhel} == 3
+
+%if "%{use_system_lmdb}" != "true" || "%{use_system_openssl}" != "true"
+
 if [ ! `grep "/opt/rudder/lib" /etc/ld.so.conf` ]; then
 	echo "/opt/rudder/lib" >> /etc/ld.so.conf
 fi
 
 # Reload the linker configuration
 ldconfig
+%endif
+
 %endif
 
 # Always do this
@@ -409,15 +520,31 @@ fi
 %if "%{?_os}" == "aix"
 if [ ${CFRUDDER_FIRST_INSTALL} -ne 1 ]; then /usr/bin/stopsrc -s rudder-agent; fi
 %else
-if [ ${CFRUDDER_FIRST_INSTALL} -ne 1 -a -x /etc/init.d/rudder-agent ]; then /sbin/service rudder-agent stop; fi
+if [ ${CFRUDDER_FIRST_INSTALL} -ne 1 -a -x /etc/init.d/rudder-agent ]; then service rudder-agent stop || service rudder-agent forcestop; fi
+%endif
+
+%if "%{?_os}" == "aix"
+# On AIX, trigger slibclean to remove any unused library/binary object from memory
+# Will prevent "Text file busy" errors during the following copy
+slibclean
 %endif
 
 # Copy CFEngine binaries
 %{cp_a_command} -f /opt/rudder/bin/cf-* /var/rudder/cfengine-community/bin/
+%{cp_a_command} -f /opt/rudder/bin/rpmvercmp /var/rudder/cfengine-community/bin/
 NB_COPIED_BINARIES=`ls -1 /var/rudder/cfengine-community/bin/ | wc -l`
 if [ ${NB_COPIED_BINARIES} -gt 0 ];then echo "CFEngine binaries copied to workdir"; fi
 
-# Copy initial promises if there aren't any already
+# Set up initial promises if necessary
+
+# Backup rudder-server-roles.conf
+if [ -e /var/rudder/cfengine-community/inputs/rudder-server-roles.conf ]
+then
+  mkdir -p /var/backups/rudder
+  cp -a /var/rudder/cfengine-community/inputs/rudder-server-roles.conf /var/backups/rudder/
+  RESTORE_SERVER_ROLES_BACKUP=1
+fi
+
 if [ ! -e /var/rudder/cfengine-community/inputs/promises.cf ]
 then
 	cp -r /opt/rudder/share/initial-promises/* /var/rudder/cfengine-community/inputs
@@ -430,6 +557,11 @@ if ! /var/rudder/cfengine-community/bin/cf-promises >/dev/null 2>&1 && [ "z${RUD
 then
 	rm -rf /var/rudder/cfengine-community/inputs/*
 	%{cp_a_command} /opt/rudder/share/initial-promises/* /var/rudder/cfengine-community/inputs/
+fi
+
+# Restore rudder-server-roles.conf if necessary
+if [ "z${RESTORE_SERVER_ROLES_BACKUP}" = "z1" ]; then
+  cp -a /var/backups/rudder/rudder-server-roles.conf /var/rudder/cfengine-community/inputs/rudder-server-roles.conf
 fi
 
 # This fix is required for upgrades from 2.6 or earlier. Since we didn't support AIX on those versions,
@@ -446,6 +578,9 @@ fi
 if [ ${I_SET_THE_LOCK} -eq 1 ]; then
 	rm -f /opt/rudder/etc/disable-agent
 fi
+
+# Remove cfengine lock log file : http://www.rudder-project.org/redmine/issues/5488
+rm -f /var/rudder/cfengine-community/cf3.*.runlog*
 
 # Restart daemons if we stopped them, otherwise not
 if [ ${CFRUDDER_FIRST_INSTALL} -ne 1 ]
@@ -491,7 +626,7 @@ fi
 if [ ! -f /var/rudder/cfengine-community/ppkeys/localhost.priv ]
 then
 	echo "INFO: Creating keys for CFEngine agent..."
-	/var/rudder/cfengine-community/bin/cf-key > /dev/null 2>&1
+	/var/rudder/cfengine-community/bin/cf-key >> %{rudderlogdir}/install/rudder-agent.log 2>&1
 	echo "INFO: Created a new key for CFEngine agent in /var/rudder/cfengine-community/ppkeys/"
 fi
 
@@ -514,7 +649,6 @@ if [ -f ${TMP_CRON} ]; then
 fi
 %endif
 
-# launch rudder agent check script, it will generate an UUID on first install or repair it if needed
 /opt/rudder/bin/check-rudder-agent
 
 %preun -n rudder-agent
@@ -523,14 +657,20 @@ fi
 #=================================================
 
 # Do it during upgrade and uninstall
+
 # Keep a backup copy of uuid.hive
-mkdir -p /var/backups/rudder
-cp -f /opt/rudder/etc/uuid.hive /var/backups/rudder/uuid-$(date +%Y%m%d).hive
-echo "INFO: A back up copy of the /opt/rudder/etc/uuid.hive has been created in /var/backups/rudder"
+if [ -f /opt/rudder/etc/uuid.hive ]; then
+  mkdir -p /var/backups/rudder
+  cp -f /opt/rudder/etc/uuid.hive /var/backups/rudder/uuid-$(date +%Y%m%d).hive
+  echo "INFO: A back up copy of the /opt/rudder/etc/uuid.hive has been created in /var/backups/rudder"
+fi
 
 # Keep a backup copy of CFEngine ppkeys
-%{cp_a_command} -f /var/rudder/cfengine-community/ppkeys/ /var/backups/rudder/ppkeys-$(date +%Y%m%d)
-echo "INFO: A back up copy of the /var/rudder/cfengine-community/ppkeys has been created in /var/backups/rudder"
+if [ -d /var/rudder/cfengine-community/ppkeys/ ]; then
+  mkdir -p /var/backups/rudder
+  %{cp_a_command} -f /var/rudder/cfengine-community/ppkeys/ /var/backups/rudder/ppkeys-$(date +%Y%m%d)
+  echo "INFO: A back up copy of the /var/rudder/cfengine-community/ppkeys has been created in /var/backups/rudder"
+fi
 
 
 %postun -n rudder-agent
@@ -582,21 +722,33 @@ rm -f %{_builddir}/file.list.%{name}
 # Files from %{rudderdir} and %{ruddervardir} are automatically added via the -f option
 %files -n rudder-agent -f %{_builddir}/file.list.%{name}
 %defattr(-, root, root, 0755)
-%config(noreplace) %{rudderdir}/etc/uuid.hive
+
+# The following file is declared to belong to this package but will not be installed
+# This is because it is populated during post-inst scriptlet
+# This is not reflected in debian packaging, because dpkg will never replace an
+# existing file declared in conffiles
+%ghost %{rudderdir}/etc/uuid.hive
+
 %if "%{?_os}" != "aix"
 /etc/profile.d/rudder-agent.sh
 /etc/init.d/rudder-agent
 /etc/default/rudder-agent
 /etc/cron.d/rudder-agent
 %endif
+
 %attr(0600, -, -) %dir %{ruddervardir}/cfengine-community/ppkeys
 %dir %{ruddervardir}/cfengine-community/bin
 %dir %{ruddervardir}/cfengine-community/inputs
 %dir %{ruddervardir}/tmp
 %dir %{ruddervardir}/tools
-%if "%{is_tokyocabinet_here}" != "true" && 0%{?rhel} != 3
+%if 0%{?rhel} != 3
+
+%if "%{use_system_lmdb}" != "true" || "%{use_system_openssl}" != "true"
 %config(noreplace) /etc/ld.so.conf.d/rudder.conf
 %endif
+
+%endif
+%{rudderlogdir}/install
 
 #=================================================
 # Changelog

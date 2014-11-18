@@ -19,13 +19,30 @@ set -e
 
 case "$1" in
     configure)
+
+  # Currently, we assume that the server where the webapp is installed
+  # is the root server. Force the UUID.
+  echo 'root' > /opt/rudder/etc/uuid.hive
+
   echo -n "INFO: Restarting syslog..."
   invoke-rc.d rsyslog restart >/dev/null 2>&1
   echo "Done"
 
+  APACHE_VERSION=$(apache2 -v|grep Apache|sed "s%^.*Apache/\([0-9].[0-9]\).*%\1%")
+
   SITES_TO_DISABLE="default rudder-default rudder-default-ssl"
   SITES_TO_ENABLE="rudder-vhost rudder-vhost-ssl"
+
   MODULES_TO_ENABLE="dav_fs rewrite proxy_http headers ssl"
+
+  # Migration: Clean up old vhosts if we are running Apache 2.4
+  if [ ${APACHE_VERSION} = 2.4 ]
+  then
+    for i in ${SITES_TO_ENABLE}
+    do
+      [ ! -e /etc/apache2/sites-enabled/${i} ] || rm -f /etc/apache2/sites-enabled/${i}
+    done
+  fi
 
   for dissite in ${SITES_TO_DISABLE}
   do
@@ -91,6 +108,59 @@ case "$1" in
 		ncf init /var/rudder/configuration-repository/ncf
 	fi
 
+  # Go into configuration-repository to manage git
+  cd /var/rudder/configuration-repository
+  # Initialize git repository if it is missing, so permissions can be set on it afterwards
+  if [ ! -d /var/rudder/configuration-repository/.git ]; then
+
+    git init --shared=group
+
+    # Specify default git user name and email (git will refuse to commit without them)
+    git config user.name "root user (CLI)"
+    git config user.email "root@localhost"
+
+    git add .
+    git commit -m "initial commit"
+
+  else
+
+    # This should have been set during repository initialization, but might need to be
+    # added if we are upgrading an existing repository
+    if [ $(git config --get-regexp "user.name|user.email"|wc -l) -ne 2 ]; then
+      git config user.name "root user (CLI)"
+      git config user.email "root@localhost"
+    fi
+
+    # Set shared repository value to group if not set
+    if ! git config core.sharedRepository >/dev/null 2>&1; then
+      git config core.sharedRepository group
+    fi
+  fi
+
+  # Create the configuration-repository group if it does not exist
+  if ! getent group rudder > /dev/null; then
+    echo -n "INFO: Creating group rudder..."
+    groupadd --system rudder
+    echo " Done"
+  fi
+
+  # Add the ncf-api-venv user to this group
+  if ! getent group rudder | grep -q ncf-api-venv > /dev/null; then
+    echo -n "INFO: Adding ncf-api-venv to the rudder group..."
+    usermod -aG rudder ncf-api-venv
+    echo " Done"
+  fi
+
+  # Adjust permissions on /var/rudder/configuration-repository
+  chgrp -R rudder /var/rudder/configuration-repository
+  ## Add execution permission for ncf-api only on directories and files with user execution permission
+  chmod -R u+rwX,g+rwsX /var/rudder/configuration-repository/.git
+  chmod -R u+rwX,g+rwsX /var/rudder/configuration-repository/ncf
+  chmod -R u+rwX,g+rwsX /var/rudder/configuration-repository/techniques
+  ## Add execution permission for ncf-apo on pre/post-hooks
+  chmod -R 2750 /var/rudder/configuration-repository/ncf/ncf-hooks.d/
+
+
 	# Only for Ubuntu:
 	## Change rsyslog port number since Ubuntu 12.04 doesn't allow to use standard
 	## rsyslog port number (https://bugs.launchpad.net/ubuntu/+source/rsyslog/+bug/789174)
@@ -104,12 +174,17 @@ case "$1" in
 	fi
 
 
+  # Create a symlink to the Jetty context if necessary
+  if [ -d "/opt/rudder/jetty7/contexts" ]; then
+    ln -sf /opt/rudder/share/webapps/rudder.xml /opt/rudder/jetty7/contexts/rudder.xml
+  fi
+
   # Restart the webapp
   echo -n "INFO: Restarting Rudder webapp and inventory-endpoint..."
-  if [ /etc/init.d/jetty check >/dev/null 2>&1 ];then
-    /etc/init.d/jetty start >/dev/null 2>&1
+  if [ /etc/init.d/rudder-jetty check >/dev/null 2>&1 ];then
+    /etc/init.d/rudder-jetty start >/dev/null 2>&1
   else
-    /etc/init.d/jetty restart >/dev/null 2>&1 || echo "WARNING: Jetty failed to start, maybe there is not enough RAM or swap on the machine. Skipping..."
+    /etc/init.d/rudder-jetty restart >/dev/null 2>&1 || echo -n "WARNING: Jetty failed to start, maybe there is not enough RAM or swap on the machine. Skipping... "
   fi
   echo " Done"
 

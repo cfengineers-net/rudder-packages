@@ -19,39 +19,55 @@
 .DEFAULT_GOAL := localdepends
 
 RUDDER_VERSION_TO_PACKAGE = <put Rudder version or version-snapshot here>
-CFENGINE_RELEASE = 3.5.3
+
+CFENGINE_RELEASE = 3.6.0
 FUSION_RELEASE = 2.3.6
-TOKYOCABINET_RELEASE = 1.4.48
+LMDB_RELEASE = 0.9.11
+OPENSSL_RELEASE = 1.0.1i
+
 TMP_DIR := $(shell mktemp -dq /tmp/rudder.XXXXXX)
 WGET := $(if $(PROXY), http_proxy=$(PROXY) ftp_proxy=$(PROXY)) /usr/bin/wget -q
 PATCH := /usr/bin/patch
 FIND := /usr/bin/find
 
-localdepends: ./initial-promises ./detect_os.sh ./files ./fusioninventory-agent ./tokyocabinet-source ./cfengine-source ../debian/rudder-agent.init ../debian/rudder-agent.default ./rudder-agent.cron ../debian/rudder-agent.cron.d
+localdepends: ./initial-promises ./detect_os.sh ./files ./fusioninventory-agent ./cfengine-source ./openssl-source ./lmdb-source ../debian/rudder-agent.init ../debian/rudder-agent.default ./rudder-agent.cron ../debian/rudder-agent.cron.d
 	rm -rf $(TMP_DIR)
 
 ./cfengine-source: /usr/bin/wget
-	# Original URL: http://cfengine.com/source-code/download?file=cfengine-$(CFENGINE_RELEASE).tar.gz
-	$(WGET) -O $(TMP_DIR)/cfengine.tgz http://www.normation.com/tarball/cfengine-$(CFENGINE_RELEASE).tar.gz
+	# Original URL: https://s3.amazonaws.com/cfengine.package-repos/tarballs/cfengine-$(CFENGINE_RELEASE).tar.gz
+	$(WGET) -O $(TMP_DIR)/cfengine.tgz http://www.normation.com/tarball/cfengine/cfengine-$(CFENGINE_RELEASE).tar.gz
 	tar xzf $(TMP_DIR)/cfengine.tgz -C $(TMP_DIR)
 	mv $(TMP_DIR)/cfengine-$(CFENGINE_RELEASE) ./cfengine-source
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0001-add-support-for-openvz.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0002-cfengine-report-on-package-removal.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0003-dont-remove-blank-line-in-templates.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0004-partially-revert-a-change-intended-to-alter-the-log.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0005-tiny-optimization-in-safe-open.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0006-fix-failure-to-open-paths-ending-in-a-slash.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0007-fix-incorrect-return-value-for-empty-string-in-safe.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0008-make-safe-open-treat-trailing-slashes-like-open.patch
+	# Apply patches
+	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0001-fix-unsupported-openssl-options.patch
+	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0002-explicitely-use-pthreads-during-lmdb-presence-detection.patch
+	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0003-fix-fprintf-usage-on-old-gcc-versions.patch
+	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0004-fix-zero-sized-files-from-template-when-nolocks.patch
+	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0005-fix-readstringarrayidx-duplicate-lines.patch
+	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0006-openvz-support.patch
+	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0007-no-runlog.patch
+	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0008-fix-promise-evaluation.patch
+	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0009-dont-duplicate-text-blocks.patch
+	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0010-support-large-int.patch
+	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0011-cfserverd_understands_SIGHUP.patch
 
-./tokyocabinet-source: /usr/bin/wget
-	# Original URL: http://fallabs.com/tokyocabinet/tokyocabinet-${TOKYOCABINET_RELEASE}.tar.gz
-	$(WGET) -O $(TMP_DIR)/tokyocabinet.tgz http://www.normation.com/tarball/tokyocabinet-${TOKYOCABINET_RELEASE}.tar.gz
-	tar xzf $(TMP_DIR)/tokyocabinet.tgz -C $(TMP_DIR)
-	mv $(TMP_DIR)/tokyocabinet-$(TOKYOCABINET_RELEASE) ./tokyocabinet-source
+	# Bootstrap the package using autogen before compilation
+	cd cfengine-source && NO_CONFIGURE=1 ./autogen.sh
+
+./openssl-source: /usr/bin/wget
+	# Original URL: https://www.openssl.org/source/openssl-$(OPENSSL_RELEASE).tar.gz
+	$(WGET) -O $(TMP_DIR)/openssl.tgz http://www.normation.com/tarball/openssl/openssl-$(OPENSSL_RELEASE).tar.gz
+	tar xzf $(TMP_DIR)/openssl.tgz -C $(TMP_DIR)
+	mv $(TMP_DIR)/openssl-$(OPENSSL_RELEASE) ./openssl-source
+
+./lmdb-source: /usr/bin/wget
+	# Original URL: http://ftp.fr.debian.org/debian/pool/main/l/lmdb/lmdb_$(LMDB_RELEASE).orig.tar.xz
+	$(WGET) -O $(TMP_DIR)/lmdb.tgz http://www.normation.com/tarball/lmdb-$(LMDB_RELEASE).tar.gz
+	tar xzf $(TMP_DIR)/lmdb.tgz -C $(TMP_DIR)
+	mv $(TMP_DIR)/lmdb-$(LMDB_RELEASE) ./lmdb-source
 
 ./rudder-sources.tar.bz2:
-	$(WGET) -O rudder-sources.tar.bz2 http://www.rudder-project.org/archives/rudder-sources-${RUDDER_VERSION_TO_PACKAGE}.tar.bz2
+	$(WGET) -O rudder-sources.tar.bz2 http://www.rudder-project.org/archives/rudder-sources-$(RUDDER_VERSION_TO_PACKAGE).tar.bz2
 
 ./rudder-sources: ./rudder-sources.tar.bz2
 	tar -xjf rudder-sources.tar.bz2
@@ -74,6 +90,10 @@ localdepends: ./initial-promises ./detect_os.sh ./files ./fusioninventory-agent 
 	$(PATCH) -d ./fusioninventory-agent -p1 < ./patches/fusioninventory/0002-install-d-mkdir-p.patch
 	$(PATCH) -d ./fusioninventory-agent -p1 < ./patches/fusioninventory/0003-unix-ps-etime-usage.patch
 	$(PATCH) -d ./fusioninventory-agent -p1 < ./patches/fusioninventory/0004-aix-microcode-version-retrieval.patch
+	$(PATCH) -d ./fusioninventory-agent -p1 < ./patches/fusioninventory/0005-aix-duplicated-network-interfaces.patch
+	$(PATCH) -d ./fusioninventory-agent -p1 < ./patches/fusioninventory/0006-fixes-oracle-linux-os-name.patch
+	$(PATCH) -d ./fusioninventory-agent -p1 < ./patches/fusioninventory/0007-correct-storage-size-detection.patch
+	$(PATCH) -d ./fusioninventory-agent -p1 < ./patches/fusioninventory/0008-detect-docker-containers.patch
 	# Fix a lsusb invocation that crashes some SLES machines
 	$(FIND) ./fusioninventory-agent -iname "USB.pm" -exec rm "{}" \;
 
@@ -117,6 +137,14 @@ localdepends: ./initial-promises ./detect_os.sh ./files ./fusioninventory-agent 
 	$(WGET) -O ./files/File-Which-1.09.tar.gz http://www.normation.com/tarball/File-Which-1.09.tar.gz
 	#Original URL: http://www.cpan.org/modules/by-module/XML/XML-TreePP-0.41.tar.gz
 	$(WGET) -O ./files/XML-TreePP-0.41.tar.gz http://www.normation.com/tarball/XML-TreePP-0.41.tar.gz
+	#Original URL: http://search.cpan.org/CPAN/authors/id/P/PE/PERIGRIN/XML-NamespaceSupport-1.11.tar.gz
+	$(WGET) -O ./files/XML-NamespaceSupport-1.11.tar.gz http://www.normation.com/tarball/XML-NamespaceSupport-1.11.tar.gz
+	#Original URL: http://search.cpan.org/CPAN/authors/id/A/AD/ADAMK/Test-Script-1.07.tar.gz
+	$(WGET) -O ./files/Test-Script-1.07.tar.gz http://www.normation.com/tarball/Test-Script-1.07.tar.gz
+	#Original URL: http://search.cpan.org/CPAN/authors/id/K/KW/KWILLIAMS/Probe-Perl-0.03.tar.gz
+	$(WGET) -O ./files/Probe-Perl-0.03.tar.gz http://www.normation.com/tarball/Probe-Perl-0.03.tar.gz
+	#Original URL: http://search.cpan.org/CPAN/authors/id/R/RJ/RJBS/IPC-Run3-0.048.tar.gz
+	$(WGET) -O ./files/IPC-Run3-0.048.tar.gz http://www.normation.com/tarball/IPC-Run3-0.048.tar.gz
 
 ../debian/rudder-agent.init:
 	cp ./rudder-agent.init ../debian/
@@ -140,7 +168,7 @@ localdepends: ./initial-promises ./detect_os.sh ./files ./fusioninventory-agent 
 
 localclean:
 	rm -rf ./cfengine-source
-	rm -rf ./tokyocabinet-source
+	rm -rf ./lmdb-source
 	rm -rf ./initial-promises
 	rm -rf ./detect_os.sh
 	rm -f ../debian/rudder-agent.init
