@@ -2,8 +2,8 @@ function build_cfengine() {
 	cd $BUILDDIR/cfengine-source/libutils
 	$PATCH -p0 < $SCRIPTDIR/patches/SunOS/cfengine/0001-fix-missing-include-ieeefp-header-file.patch
 
-	cd $BUILDDIR/cfengine-source/libpromises
-	$PATCH -p0 < $SCRIPTDIR/patches/SunOS/cfengine/0002-fix-missing-unistd-h-include-in-solaris-ifaddrs-h.patch
+#	cd $BUILDDIR/cfengine-source/libpromises
+#	$PATCH -p0 < $SCRIPTDIR/patches/SunOS/cfengine/0002-fix-missing-unistd-h-include-in-solaris-ifaddrs-h.patch
 
 	cd $BUILDDIR/cfengine-source
 	OPTS=""

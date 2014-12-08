@@ -2,7 +2,7 @@
 
 . $PWD/vars/common
 
-. $PWD/vars/cfengine.$OS.$1
+. $PWD/vars/cfengine.$OS
 . $PWD/vars/exports
 
 . $PWD/functions/build/common
