@@ -3,7 +3,7 @@ eval 'exec perl -w -S $0 ${1+"$@"}'
         if 0;
 
 #####################################################################################
-# Copyright 2013 Normation SAS
+# Copyright 2014- cfengineers.net
 #####################################################################################
 #
 # This program is free software: you can redistribute it and/or modify
@@ -19,6 +19,7 @@ eval 'exec perl -w -S $0 ${1+"$@"}'
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #####################################################################################
+
 use strict;
 use POSIX;
 
