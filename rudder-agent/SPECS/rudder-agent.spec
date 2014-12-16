@@ -34,6 +34,7 @@
 %define rudderdir            /opt/rudder
 %define ruddervardir         /var/rudder
 %define rudderlogdir         /var/log/rudder
+%define bindir               /usr/bin
 
 # use_system_lmdb checks if to build CFEngine we will need to build LMDB or if
 # a package already exists on the system.
@@ -69,13 +70,14 @@ Source8: vzps.py
 Source9: rudder-agent.sh
 Source10: detect_os.sh
 Source11: rudder-perl
+Source12: rudder-agent-utilities
 
 # uuidgen doesn't exist on AIX, so we provide a simple shell compatible version
 %if "%{?_os}" == "aix"
 Source100: uuidgen
 %endif
 
-# Prevent dependency auto-generation, that tries to be helpful by detecting Perl dependencies from
+# Prevent dependency auto-generation, that tries to be helpful by detecting Perl dependencies from
 # FusionInventory. We handle that with the perl standalone installation already.
 AutoReq: 0
 AutoProv: 0
@@ -105,7 +107,7 @@ Requires: crontabs net-tools
 Requires: cron net-tools
 %endif
 
-# dmiecode is provided in the "dmidecode" package on EL4+ and on kernel-utils
+# dmiecode is provided in the "dmidecode" package on EL4+ and on kernel-utils
 # on EL3
 %if 0%{?rhel} && 0%{?rhel} >= 4
 Requires: dmidecode
@@ -115,7 +117,7 @@ Requires: dmidecode
 Requires: kernel-utils
 %endif
 
-# dmidecode is provided by "dmidecode" too on Fedora platforms, but I'm adding
+# dmidecode is provided by "dmidecode" too on Fedora platforms, but I'm adding
 # another if block to prevent cluttering the conditions on the >= el4 one and
 # prevent possible unwanted non-matches.
 %if 0%{?fedora}
@@ -124,17 +126,17 @@ Requires: dmidecode
 
 # LMDB handling (builtin or OS-provided)
 
-## 1 - RHEL: No LMDB yet
+## 1 - RHEL: No LMDB yet
 %if 0%{?rhel}
 %define use_system_lmdb false
 %endif
 
-## 2 - Fedora: No LMDB yet
+## 2 - Fedora: No LMDB yet
 %if 0%{?fedora}
 %define use_system_lmdb false
 %endif
 
-## 3 - SLES: No LMDB yet
+## 3 - SLES: No LMDB yet
 %if 0%{?sles_version}
 Requires: pmtools
 %define use_system_lmdb false
@@ -153,7 +155,7 @@ Requires: pmtools
 #
 # See. http://www.rudder-project.org/redmine/issues/5147
 
-## 1 - RHEL: Bundled for pre-el5 oses
+## 1 - RHEL: Bundled for pre-el5 oses
 ##
 ### Pre el5 have reached the end of production phase,
 ### and are thus in Extended Life phase.
@@ -161,29 +163,22 @@ Requires: pmtools
 ##
 %if 0%{?rhel} && 0%{?rhel} < 5
 %define use_system_openssl false
-%else
-%define use_system_openssl true
 %endif
 
-## 2 - Fedora: Use the system one
+## 2 - Fedora: Use the system one
 ##
 ### We work with Fedora 18 onwards, it
 ### comes with OpenSSL 1.0.1e, which is
 ### recent enough.
 ##
-%if 0%{?fedora}
-%define use_system_openssl true
-%endif
 
-## 3 - SLES: Bundled for pre-sles11 oses
+## 3 - SLES: Bundled for pre-sles11 oses
 ##
 ### SLES 11 OSes come with OpenSSL 0.9.8h,
 ### which is recent enough.
 ##
 %if 0%{?sles_version} && 0%{?sles_version} < 11
 %define use_system_openssl false
-%else
-%define use_system_openssl true
 %endif
 
 ## 4 - AIX: Bundled
@@ -196,13 +191,13 @@ Requires: pmtools
 %define use_system_openssl false
 %endif
 
-## 5 - Resulting dependencies
+## 5 - Resulting dependencies
 %if "%{use_system_openssl}" == "true"
 BuildRequires: openssl-devel
 Requires: openssl
 %endif
 
-# Common commands
+# Common commands
 
 %define install_command        install
 %define cp_a_command           cp -a
@@ -216,7 +211,7 @@ Requires: openssl
 Provides: rudder-cfengine-community
 Obsoletes: rudder-cfengine-community
 
-# Use our own dependency generator
+# Use our own dependency generator
 %global _use_internal_dependency_generator 0
 %global __find_requires_orig %{__find_requires}
 %define __find_requires %{_sourcedir}/filter-reqs.pl %{use_system_lmdb} %{__find_requires_orig}
@@ -256,6 +251,9 @@ export CXXFLAGS="$RPM_OPT_FLAGS"
 cd %{_sourcedir}/openssl-source
 ./config -fPIC --prefix=%{rudderdir} --openssldir=%{rudderdir}/openssl shared
 make %{?_smp_mflags}
+%if "%{?_os}" == "aix"
+slibclean
+%endif
 make install
 %endif
 
@@ -265,7 +263,7 @@ rm -rf %{buildroot}
 
 # Compile LMDB library and install it in /opt/rudder/lib
 
-# LMDB's Makefile does not know how to create destination files, do it ourselves
+# LMDB's Makefile does not know how to create destination files, do it ourselves
 for i in bin lib include man/man1; do mkdir -p %{rudderdir}/$i; done
 
 cd %{_sourcedir}/lmdb-source/libraries/liblmdb
@@ -319,7 +317,7 @@ rm -rf %{buildroot}
 # Reinstall LMDB because RPM rm -rf %{buildroot} for a reason I don't understand
 # TODO: Fix this nasty hack!
 
-# LMDB's Makefile does not know how to create destination files, do it ourselves
+# LMDB's Makefile does not know how to create destination files, do it ourselves
 for i in bin lib include man/man1; do mkdir -p %{buildroot}%{rudderdir}/$i; done
 cd %{_sourcedir}/lmdb-source/libraries/liblmdb
 
@@ -337,12 +335,16 @@ make install DESTDIR=%{buildroot} STRIP=""
 
 # Directories
 mkdir -p %{buildroot}%{rudderdir}
+mkdir -p %{buildroot}%{rudderdir}/share/man/man8
 mkdir -p %{buildroot}%{rudderdir}/etc
+mkdir -p %{buildroot}%{rudderdir}/share
+mkdir -p %{buildroot}%{rudderdir}/share/commands
 mkdir -p %{buildroot}%{ruddervardir}/cfengine-community/bin
 mkdir -p %{buildroot}%{ruddervardir}/cfengine-community/inputs
 mkdir -p %{buildroot}%{ruddervardir}/tmp
 mkdir -p %{buildroot}%{ruddervardir}/tools
 mkdir -p %{buildroot}%{rudderlogdir}/install
+mkdir -p %{buildroot}%{bindir}
 
 # Init script
 # AIX does not use init scripts, instead we set up a subsystem in the post scriptlet below
@@ -372,7 +374,7 @@ cp -r %{_sourcedir}/initial-promises %{buildroot}%{rudderdir}/share/
 # Install an empty uuid.hive file before generating an uuid
 cp %{SOURCE4} %{buildroot}%{rudderdir}/etc/
 
-# ld.so.conf.d is not supported on CentOS 3
+# ld.so.conf.d is not supported on CentOS 3
 %if 0%{?rhel} != 3
 
 %if "%{use_system_lmdb}" != "true" || "%{use_system_openssl}" != "true"
@@ -389,6 +391,14 @@ mkdir -p %{buildroot}/etc/ld.so.conf.d
 %{install_command} -m 755 %{SOURCE8} %{buildroot}/opt/rudder/bin/vzps.py
 
 %{install_command} -m 755 %{SOURCE11} %{buildroot}/opt/rudder/bin/rudder-perl
+
+# Rudder agent utilities
+%{install_command} -m 755 %{SOURCE12}/bin/rudder %{buildroot}%{rudderdir}/bin/rudder
+%{cp_a_command} %{SOURCE12}/share/commands/* %{buildroot}%{rudderdir}/share/commands/
+
+# Create a symlink to make "rudder" available as part of the
+# default PATH
+ln -sf %{rudderdir}/bin/rudder %{buildroot}%{bindir}/rudder
 
 # Install a profile script to make cf-* part of the PATH
 # AIX does not support profile.d and /etc/profile should not be modified, so we don't do this on AIX at all
@@ -414,16 +424,16 @@ find %{buildroot}%{rudderdir} %{buildroot}%{ruddervardir} -type f -o -type l | s
 # Do this only during upgrade process
 if [ $1 -eq 2 ];then
 %if "%{?_os}" != "aix"
-	# Keep a backup copy of Rudder agent init and cron files to prevent http://www.rudder-project.org/redmine/issues/3995
+  # Keep a backup copy of Rudder agent init and cron files to prevent http://www.rudder-project.org/redmine/issues/3995
   for i in init.d default cron.d; do
     if [ -f /etc/${i}/rudder-agent ]; then
-	    mkdir -p /var/backups/rudder
+      mkdir -p /var/backups/rudder
       if [ "${i}" = "init.d" ]; then mode=755; else mode=644; fi
-	    %{install_command} -m ${mode} /etc/${i}/rudder-agent /var/backups/rudder/rudder-agent.$(basename ${i} .d)-$(date +%Y%m%d) && echo "INFO: A back up copy of /etc/${i}/rudder-agent has been created in /var/backups/rudder"
+      %{install_command} -m ${mode} /etc/${i}/rudder-agent /var/backups/rudder/rudder-agent.$(basename ${i} .d)-$(date +%Y%m%d) && echo "INFO: A back up copy of /etc/${i}/rudder-agent has been created in /var/backups/rudder"
     fi
   done
 %else
-	echo "INFO: No init script / cron script backup necessary on AIX builds yet. Skipping..."
+  echo "INFO: No init script / cron script backup necessary on AIX builds yet. Skipping..."
 %endif
 fi
 
@@ -450,19 +460,19 @@ fi
 # Do this at first install
 if [ $1 -eq 1 ]
 then
-	# Set rudder-agent as service
+  # Set rudder-agent as service
 %if "%{?_os}" == "aix"
-	/usr/bin/mkssys -s rudder-agent -p %{ruddervardir}/cfengine-community/bin/cf-execd -a "-F" -u root -S -n15 -f9 -R
-	/usr/sbin/mkitab "rudder-agent:23456789:once:/usr/bin/startsrc -s rudder-agent"
-	# No need to tell init to re-read /etc/inittab, it does it automatically every 60 seconds
+  /usr/bin/mkssys -s rudder-agent -p %{ruddervardir}/cfengine-community/bin/cf-execd -a "-F" -u root -S -n15 -f9 -R
+  /usr/sbin/mkitab "rudder-agent:23456789:once:/usr/bin/startsrc -s rudder-agent"
+  # No need to tell init to re-read /etc/inittab, it does it automatically every 60 seconds
 %else
-	chkconfig --add rudder-agent
+  chkconfig --add rudder-agent
 %endif
-	%if 0%{?rhel} && 0%{?rhel} >= 6
-	chkconfig rudder-agent on
-	%endif
+  %if 0%{?rhel} && 0%{?rhel} >= 6
+  chkconfig rudder-agent on
+  %endif
 
-	CFRUDDER_FIRST_INSTALL=1
+  CFRUDDER_FIRST_INSTALL=1
 fi
 
 # Reload configuration of ldd if new configuration has been added
@@ -470,7 +480,7 @@ fi
 
 %if "%{use_system_lmdb}" != "true" || "%{use_system_openssl}" != "true"
 if [ -f /etc/ld.so.conf.d/rudder.conf ]; then
-	ldconfig
+  ldconfig
 fi
 %endif
 
@@ -483,10 +493,10 @@ fi
 %if "%{use_system_lmdb}" != "true" || "%{use_system_openssl}" != "true"
 
 if [ ! `grep "/opt/rudder/lib" /etc/ld.so.conf` ]; then
-	echo "/opt/rudder/lib" >> /etc/ld.so.conf
+  echo "/opt/rudder/lib" >> /etc/ld.so.conf
 fi
 
-# Reload the linker configuration
+# Reload the linker configuration
 ldconfig
 %endif
 
@@ -497,15 +507,15 @@ ldconfig
 # Generate a UUID if we don't have one yet
 if [ ! -e /opt/rudder/etc/uuid.hive ]
 then
-	uuidgen > /opt/rudder/etc/uuid.hive
+  uuidgen > /opt/rudder/etc/uuid.hive
 else
-	# UUID is valid only if it has been generetaed by uuidgen or if it is set to 'root' for policy server
-	CHECK_UUID=`cat /opt/rudder/etc/uuid.hive | grep -E "^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}|root" | wc -l`
-	# If the UUID is not valid, regenerate it
-	if [ ${CHECK_UUID} -ne 1 ]
-	then
-		uuidgen > /opt/rudder/etc/uuid.hive
-	fi
+  # UUID is valid only if it has been generetaed by uuidgen or if it is set to 'root' for policy server
+  CHECK_UUID=`cat /opt/rudder/etc/uuid.hive | grep -E "^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}|root" | wc -l`
+  # If the UUID is not valid, regenerate it
+  if [ ${CHECK_UUID} -ne 1 ]
+  then
+    uuidgen > /opt/rudder/etc/uuid.hive
+  fi
 fi
 
 # Copy new binaries to workdir, make sure daemons are stopped first
@@ -513,8 +523,8 @@ fi
 # Set a "lock" to avoid CFEngine being restarted during the upgrade process
 I_SET_THE_LOCK=0
 if [ ! -e /opt/rudder/etc/disable-agent ]; then
-	I_SET_THE_LOCK=1
-	touch /opt/rudder/etc/disable-agent
+  I_SET_THE_LOCK=1
+  touch /opt/rudder/etc/disable-agent
 fi
 
 %if "%{?_os}" == "aix"
@@ -529,11 +539,21 @@ if [ ${CFRUDDER_FIRST_INSTALL} -ne 1 -a -x /etc/init.d/rudder-agent ]; then serv
 slibclean
 %endif
 
-# Copy CFEngine binaries
+# Set a default server if we don't have one
+if [ ! -e /var/rudder/cfengine-community/policy_server.dat ]
+then
+  echo rudder > /var/rudder/cfengine-community/policy_server.dat
+fi
+
 %{cp_a_command} -f /opt/rudder/bin/cf-* /var/rudder/cfengine-community/bin/
 %{cp_a_command} -f /opt/rudder/bin/rpmvercmp /var/rudder/cfengine-community/bin/
 NB_COPIED_BINARIES=`ls -1 /var/rudder/cfengine-community/bin/ | wc -l`
 if [ ${NB_COPIED_BINARIES} -gt 0 ];then echo "CFEngine binaries copied to workdir"; fi
+
+for i in cf-agent cf-promises cf-key cf-execd cf-serverd cf-monitord cf-runagent
+do
+  %{ruddervardir}/cfengine-community/bin/${i} -M | gzip > %{ruddervardir}/share/man/man8/${i}.8.gz
+done
 
 # Set up initial promises if necessary
 
@@ -545,18 +565,19 @@ then
   RESTORE_SERVER_ROLES_BACKUP=1
 fi
 
+# Copy initial promises if there aren't any already
 if [ ! -e /var/rudder/cfengine-community/inputs/promises.cf ]
 then
-	cp -r /opt/rudder/share/initial-promises/* /var/rudder/cfengine-community/inputs
+  cp -r /opt/rudder/share/initial-promises/* /var/rudder/cfengine-community/inputs
 fi
 
-# If the cf-promises validation fails, it means we have a broken set of promises (possibly a pre-2.8 set).
-# Reset the initial promises so the server is able to send the agent a new set of correct ones.
+# If the cf-promises validation fails, it means we have a broken set of promises (possibly a pre-2.8 set).
+# Reset the initial promises so the server is able to send the agent a new set of correct ones.
 RUDDER_UUID=`cat /opt/rudder/etc/uuid.hive 2>/dev/null || true`
 if ! /var/rudder/cfengine-community/bin/cf-promises >/dev/null 2>&1 && [ "z${RUDDER_UUID}" != "zroot" ]
 then
-	rm -rf /var/rudder/cfengine-community/inputs/*
-	%{cp_a_command} /opt/rudder/share/initial-promises/* /var/rudder/cfengine-community/inputs/
+  rm -rf /var/rudder/cfengine-community/inputs/*
+  %{cp_a_command} /opt/rudder/share/initial-promises/* /var/rudder/cfengine-community/inputs/
 fi
 
 # Restore rudder-server-roles.conf if necessary
@@ -567,16 +588,16 @@ fi
 # This fix is required for upgrades from 2.6 or earlier. Since we didn't support AIX on those versions,
 # we don't need it. And it breaks on AIX because their "sed" doesn't have a "-i" option. Grrr.
 %if "%{?_os}" != "aix"
-# Migration to CFEngine 3.5: Correct a specific Technique that breaks the most recent CFEngine versions
+# Migration to CFEngine 3.5: Correct a specific Technique that breaks the most recent CFEngine versions
 if [ -f /var/rudder/cfengine-community/inputs/distributePolicy/1.0/passwordCheck.cf ]
 then
-	sed -i 's%^\(.*ALTER USER rudder WITH PASSWORD.*p.psql_password.*\)"",$%\1""%' /var/rudder/cfengine-community/inputs/distributePolicy/1.0/passwordCheck.cf
+  sed -i 's%^\(.*ALTER USER rudder WITH PASSWORD.*p.psql_password.*\)"",$%\1""%' /var/rudder/cfengine-community/inputs/distributePolicy/1.0/passwordCheck.cf
 fi
 %endif
 
 # Remove the lock on CFEngine
 if [ ${I_SET_THE_LOCK} -eq 1 ]; then
-	rm -f /opt/rudder/etc/disable-agent
+  rm -f /opt/rudder/etc/disable-agent
 fi
 
 # Remove cfengine lock log file : http://www.rudder-project.org/redmine/issues/5488
@@ -585,49 +606,49 @@ rm -f /var/rudder/cfengine-community/cf3.*.runlog*
 # Restart daemons if we stopped them, otherwise not
 if [ ${CFRUDDER_FIRST_INSTALL} -ne 1 ]
 then
-	# Check if agent is disabled
-	if [ ! -f /opt/rudder/etc/disable-agent ]
-	then
-		if [ -r /var/rudder/cfengine-community/inputs/failsafe.cf -o -r /var/rudder/cfengine-community/inputs/promises.cf ]
-		then
+  # Check if agent is disabled
+  if [ ! -f /opt/rudder/etc/disable-agent ]
+  then
+    if [ -r /var/rudder/cfengine-community/inputs/failsafe.cf -o -r /var/rudder/cfengine-community/inputs/promises.cf ]
+    then
 %if "%{?_os}" == "aix"
-			/usr/bin/startsrc -s rudder-agent
+      /usr/bin/startsrc -s rudder-agent
 %else
-			/sbin/service rudder-agent start
+      /sbin/service rudder-agent start || true
 %endif
-		fi
-	else
-		echo "********************************************************************************"
-		echo "rudder-agent has been updated, but was not started as it is disabled."
-		echo "To enable rudder agent, you have to remove disable file, and start rudder-agent:"
-		echo "# rm -f /opt/rudder/etc/disable-agent"
+    fi
+  else
+    echo "********************************************************************************"
+    echo "rudder-agent has been updated, but was not started as it is disabled."
+    echo "To enable rudder agent, you have to remove disable file, and start rudder-agent:"
+    echo "# rm -f /opt/rudder/etc/disable-agent"
 %if "%{?_os}" == "aix"
-		echo "# startsrc -s rudder-agent"
+    echo "# startsrc -s rudder-agent"
 %else
-		echo "# /sbin/service rudder-agent start"
+    echo "# /sbin/service rudder-agent start"
 %endif
-		echo "********************************************************************************"
-	fi
+    echo "********************************************************************************"
+  fi
 else
-	echo "********************************************************************************"
-	echo "rudder-agent has been installed (not started). This host can be a Rudder node."
-	echo "To get started, configure your Rudder server's hostname and launch the agent:"
-	echo "# echo 'rudder.server' > /var/rudder/cfengine-community/policy_server.dat"
+  echo "********************************************************************************"
+  echo "rudder-agent has been installed (not started). This host can be a Rudder node."
+  echo "To get started, configure your Rudder server's hostname and launch the agent:"
+  echo "# echo 'rudder.server' > /var/rudder/cfengine-community/policy_server.dat"
 %if "%{?_os}" == "aix"
-	echo "# startsrc -s rudder-agent"
+  echo "# startsrc -s rudder-agent"
 %else
-	echo "# service rudder-agent start"
+  echo "# service rudder-agent start"
 %endif
-	echo "This node will then appear in the Rudder web interface under 'Accept new nodes'."
-	echo "********************************************************************************"
+  echo "This node will then appear in the Rudder web interface under 'Accept new nodes'."
+  echo "********************************************************************************"
 fi
 
 # Create a key if we don't have one yet
 if [ ! -f /var/rudder/cfengine-community/ppkeys/localhost.priv ]
 then
-	echo "INFO: Creating keys for CFEngine agent..."
-	/var/rudder/cfengine-community/bin/cf-key >> %{rudderlogdir}/install/rudder-agent.log 2>&1
-	echo "INFO: Created a new key for CFEngine agent in /var/rudder/cfengine-community/ppkeys/"
+  echo "INFO: Creating keys for CFEngine agent..."
+  /var/rudder/cfengine-community/bin/cf-key >> %{rudderlogdir}/install/rudder-agent.log 2>&1
+  echo "INFO: Created a new key for CFEngine agent in /var/rudder/cfengine-community/ppkeys/"
 fi
 
 %if "%{?_os}" != "aix"
@@ -637,15 +658,15 @@ CHECK_RUDDER_AGENT_CRON=`grep "/opt/rudder/bin/check-rudder-agent" /etc/cron.d/r
 TMP_CRON=/etc/cron.d/rudder-agent-uuid
 # Add it only if the default cron file does not call check-rudder-agent script
 if [ ${CHECK_RUDDER_AGENT_CRON} -eq 0 ]; then
-	if [ ! -f ${TMP_CRON} ]; then
-		echo "0,5,10,15,20,25,30,35,40,45,50,55 * * * * root /opt/rudder/bin/check-rudder-agent" > ${TMP_CRON}
-	fi
+  if [ ! -f ${TMP_CRON} ]; then
+    echo "0,5,10,15,20,25,30,35,40,45,50,55 * * * * root /opt/rudder/bin/check-rudder-agent" > ${TMP_CRON}
+  fi
 fi
 
-# Vixie-cron and cronie (at least) expect specific permissions to be applied
-# on /etc/cron.d entries, and will refuse to load executable files.
+# Vixie-cron and cronie (at least) expect specific permissions to be applied
+# on /etc/cron.d entries, and will refuse to load executable files.
 if [ -f ${TMP_CRON} ]; then
-	chmod 644 ${TMP_CRON}
+  chmod 644 ${TMP_CRON}
 fi
 %endif
 
@@ -658,14 +679,14 @@ fi
 
 # Do it during upgrade and uninstall
 
-# Keep a backup copy of uuid.hive
+# Keep a backup copy of uuid.hive
 if [ -f /opt/rudder/etc/uuid.hive ]; then
   mkdir -p /var/backups/rudder
   cp -f /opt/rudder/etc/uuid.hive /var/backups/rudder/uuid-$(date +%Y%m%d).hive
   echo "INFO: A back up copy of the /opt/rudder/etc/uuid.hive has been created in /var/backups/rudder"
 fi
 
-# Keep a backup copy of CFEngine ppkeys
+# Keep a backup copy of CFEngine ppkeys
 if [ -d /var/rudder/cfengine-community/ppkeys/ ]; then
   mkdir -p /var/backups/rudder
   %{cp_a_command} -f /var/rudder/cfengine-community/ppkeys/ /var/backups/rudder/ppkeys-$(date +%Y%m%d)
@@ -688,7 +709,7 @@ function pidof {
 
 # Do it only during uninstallation
 if [ $1 -eq 0 ]; then
-  # Make sure that CFEngine is not running anymore
+  # Make sure that CFEngine is not running anymore
   for component in cf-agent cf-serverd cf-execd cf-monitord; do
     if pid=`pidof ${component}`; then
       kill -9 ${pid}
@@ -707,6 +728,7 @@ if [ $1 -eq 0 ]; then
 
   # Remove UUID in any case
   rm -f /opt/rudder/etc/uuid.hive
+  rm -f %{ruddervardir}/cfengine-community/policy_server.dat
 fi
 
 #=================================================
@@ -722,6 +744,8 @@ rm -f %{_builddir}/file.list.%{name}
 # Files from %{rudderdir} and %{ruddervardir} are automatically added via the -f option
 %files -n rudder-agent -f %{_builddir}/file.list.%{name}
 %defattr(-, root, root, 0755)
+
+%{bindir}/rudder
 
 # The following file is declared to belong to this package but will not be installed
 # This is because it is populated during post-inst scriptlet
@@ -754,7 +778,7 @@ rm -f %{_builddir}/file.list.%{name}
 # Changelog
 #=================================================
 %changelog
-* Fri Apr  27 2011 - Matthieu CERDA <matthieu.cerda@normation.com> 2.2-beta1-2
+* Wed Apr  27 2011 - Matthieu CERDA <matthieu.cerda@normation.com> 2.2-beta1-2
 - The packages now builds correctly on both x86 and x86_64 archs, and on EL4/CentOS 4.
 * Tue Mar  1 2011 - Jonathan CLARKE <jonathan.clarke@normation.com> 2.2-beta1-1
 - Release 2.2.beta1

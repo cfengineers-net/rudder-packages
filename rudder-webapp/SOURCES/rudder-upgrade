@@ -63,6 +63,7 @@ trap anomaly_handler ERR INT TERM
 # - 2.11.4 : Add the property for the command line to force the server to reload its promises
 # - 3.0.0        : Add the nodeConfigId column in the ReportsExecution table and add the nodes_info table
 # - 3.0.0        : Add the rudder.jdbc.maxPoolSize property
+# - 3.0.0        : File Format migration from 5 to 6
 #####################################################################################
 
 # Some variables
@@ -371,7 +372,7 @@ fi
 STEP="Add the nodeConfigId column in the ReportsExecution table and add the nodes_info table"
 
 RES=$(${PSQL} -t -d rudder -c "select count(1) from pg_class where relname = 'nodes_info'")
-if [ $RES -ne 0 ]; then
+if [ ${RES} -eq 0 ]; then
   ${PSQL} -d rudder -f ${RUDDER_UPGRADE_TOOLS}/dbMigration-2.11-2.12-add-nodeconfigids-columns.sql > /dev/null 2>&1
 fi
 
@@ -688,7 +689,16 @@ check_and_add_config_property rudder.cfengine.reload.server.command "
 # Command to force the server to reload its promises
 # This will be run every time promises are regenerated on the root server
 #
-rudder.cfengine.reload.server.command=/usr/bin/killall -SIGHUP cf-serverd"
+rudder.cfengine.reload.server.command=/usr/bin/killall -SIGHUP cf-serverd || /bin/kill -SIGHUP \`/bin/pidof cf-serverd 2>/dev/null\`"
+
+# - 3.0.0 : File Format migration from 5 to 6
+STEP="3.0.0: File Format migration from 5 to 6"
+
+RES=$(${PSQL} -t -d rudder -c "select count(*) from (select xpath('/entry/*[@fileFormat=5]',data) AS x from eventlog) as Y where array_upper(x, 1) > 0;")
+if [ $RES -ne 0 ]; then
+  ${PSQL} -d rudder -f ${RUDDER_UPGRADE_TOOLS}/dbMigration-2.11-3.0-set-migration-needed-flag-for-EventLog.sql > /dev/null 2>&1
+fi
+
 
 # For every upgrade, we force the root server to run a new inventory on the next CFEngine run
 touch /opt/rudder/etc/force_inventory

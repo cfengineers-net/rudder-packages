@@ -9,10 +9,6 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-# Set JAVA_HOME according to available JVM
-# We support Sun Java 6 or OpenJDK 7, privilege later versions (sort -r)
-export JAVA_HOME := $(shell find /usr/lib/jvm -maxdepth 1 -type d -name java-7-openjdk-i386 -or -name java-7-openjdk-amd64 -or -name java-6-sun | sort -r | head -n1)
-
 export MAVEN_OPTS := -Xmx512m
 MAVEN_SETTINGS := settings-external.xml
 
@@ -26,12 +22,12 @@ build: build-stamp
 build-stamp: configure-stamp
 	dh_testdir
 	
-	cd $(CURDIR)/SOURCES/rudder-sources/rudder-parent-pom && $(CURDIR)/SOURCES/maven2/bin/mvn -s $(CURDIR)/SOURCES/$(MAVEN_SETTINGS) -Dmaven.test.skip=true install
-	cd $(CURDIR)/SOURCES/rudder-sources/rudder-commons && $(CURDIR)/SOURCES/maven2/bin/mvn -s $(CURDIR)/SOURCES/$(MAVEN_SETTINGS) -Dmaven.test.skip=true install
-	cd $(CURDIR)/SOURCES/rudder-sources/scala-ldap && $(CURDIR)/SOURCES/maven2/bin/mvn -s $(CURDIR)/SOURCES/$(MAVEN_SETTINGS) -Dmaven.test.skip=true install
-	cd $(CURDIR)/SOURCES/rudder-sources/ldap-inventory && $(CURDIR)/SOURCES/maven2/bin/mvn -s $(CURDIR)/SOURCES/$(MAVEN_SETTINGS) -Dmaven.test.skip=true install
-	cd $(CURDIR)/SOURCES/rudder-sources/cf-clerk && $(CURDIR)/SOURCES/maven2/bin/mvn -s $(CURDIR)/SOURCES/$(MAVEN_SETTINGS) -Dmaven.test.skip=true install
-	cd $(CURDIR)/SOURCES/rudder-sources/rudder && $(CURDIR)/SOURCES/maven2/bin/mvn -s $(CURDIR)/SOURCES/$(MAVEN_SETTINGS) -Dmaven.test.skip=true install package
+	cd $(CURDIR)/SOURCES/rudder-sources/rudder-parent-pom && $(CURDIR)/SOURCES/maven/bin/mvn -s $(CURDIR)/SOURCES/$(MAVEN_SETTINGS) -Dmaven.test.skip=true install
+	cd $(CURDIR)/SOURCES/rudder-sources/rudder-commons && $(CURDIR)/SOURCES/maven/bin/mvn -s $(CURDIR)/SOURCES/$(MAVEN_SETTINGS) -Dmaven.test.skip=true install
+	cd $(CURDIR)/SOURCES/rudder-sources/scala-ldap && $(CURDIR)/SOURCES/maven/bin/mvn -s $(CURDIR)/SOURCES/$(MAVEN_SETTINGS) -Dmaven.test.skip=true install
+	cd $(CURDIR)/SOURCES/rudder-sources/ldap-inventory && $(CURDIR)/SOURCES/maven/bin/mvn -s $(CURDIR)/SOURCES/$(MAVEN_SETTINGS) -Dmaven.test.skip=true install
+	cd $(CURDIR)/SOURCES/rudder-sources/cf-clerk && $(CURDIR)/SOURCES/maven/bin/mvn -s $(CURDIR)/SOURCES/$(MAVEN_SETTINGS) -Dmaven.test.skip=true install
+	cd $(CURDIR)/SOURCES/rudder-sources/rudder && $(CURDIR)/SOURCES/maven/bin/mvn -s $(CURDIR)/SOURCES/$(MAVEN_SETTINGS) -Dmaven.test.skip=true install package
 
 	touch $@
 
@@ -70,7 +66,6 @@ binary-arch: install
 	dh_install --SOURCEDIR=SOURCES/ rudder-users.xml /opt/rudder/etc/
 	dh_install --SOURCEDIR=$(CURDIR)/SOURCES/rudder-sources/rudder/rudder-core/src/main/resources/ldap/ bootstrap.ldif /opt/rudder/share/
 	dh_install --SOURCEDIR=$(CURDIR)/SOURCES/rudder-sources/rudder/rudder-core/src/main/resources/ldap/ init-policy-server.ldif /opt/rudder/share/
-	dh_install --SOURCEDIR=$(CURDIR)/SOURCES/rudder-sources/rudder/rudder-core/src/main/resources/ldap/ demo-data.ldif /opt/rudder/share/
 	cp $(CURDIR)/SOURCES/rudder-sources/rudder/rudder-web/src/main/resources/configuration.properties.sample $(CURDIR)/BUILD/rudder-web.properties
 	dh_install --SOURCEDIR=$(CURDIR)/BUILD/ rudder-web.properties /opt/rudder/etc/
 	dh_install --SOURCEDIR=$(CURDIR)/SOURCES/rudder-sources/rudder/rudder-web/src/main/resources/ logback.xml /opt/rudder/etc/
@@ -113,6 +108,8 @@ binary-arch: install
 
 	dh_install --SOURCEDIR=$(CURDIR)/SOURCES/ rudder-upgrade /opt/rudder/bin/
 	dh_install --SOURCEDIR=$(CURDIR)/SOURCES/ rudder-upgrade-database /opt/rudder/bin/
+
+	dh_install --SOURCEDIR=$(CURDIR)/SOURCES/ rudder-metrics-reporting /opt/rudder/bin/
 
 	# Install documentation
 	dh_install --SOURCEDIR=$(CURDIR)/SOURCES/rudder-doc pdf /usr/share/doc/rudder

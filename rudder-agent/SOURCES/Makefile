@@ -20,7 +20,7 @@
 
 RUDDER_VERSION_TO_PACKAGE = <put Rudder version or version-snapshot here>
 
-CFENGINE_RELEASE = 3.6.0
+CFENGINE_RELEASE = 3.6.3
 FUSION_RELEASE = 2.3.6
 LMDB_RELEASE = 0.9.11
 OPENSSL_RELEASE = 1.0.1i
@@ -30,7 +30,7 @@ WGET := $(if $(PROXY), http_proxy=$(PROXY) ftp_proxy=$(PROXY)) /usr/bin/wget -q
 PATCH := /usr/bin/patch
 FIND := /usr/bin/find
 
-localdepends: ./initial-promises ./detect_os.sh ./files ./fusioninventory-agent ./cfengine-source ./openssl-source ./lmdb-source ../debian/rudder-agent.init ../debian/rudder-agent.default ./rudder-agent.cron ../debian/rudder-agent.cron.d
+localdepends: ./initial-promises ./rudder-agent-utilities ./detect_os.sh ./files ./fusioninventory-agent ./cfengine-source ./openssl-source ./lmdb-source ../debian/rudder-agent.init ../debian/rudder-agent.default ./rudder-agent.cron ../debian/rudder-agent.cron.d
 	rm -rf $(TMP_DIR)
 
 ./cfengine-source: /usr/bin/wget
@@ -38,18 +38,9 @@ localdepends: ./initial-promises ./detect_os.sh ./files ./fusioninventory-agent 
 	$(WGET) -O $(TMP_DIR)/cfengine.tgz http://www.normation.com/tarball/cfengine/cfengine-$(CFENGINE_RELEASE).tar.gz
 	tar xzf $(TMP_DIR)/cfengine.tgz -C $(TMP_DIR)
 	mv $(TMP_DIR)/cfengine-$(CFENGINE_RELEASE) ./cfengine-source
+
 	# Apply patches
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0001-fix-unsupported-openssl-options.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0002-explicitely-use-pthreads-during-lmdb-presence-detection.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0003-fix-fprintf-usage-on-old-gcc-versions.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0004-fix-zero-sized-files-from-template-when-nolocks.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0005-fix-readstringarrayidx-duplicate-lines.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0006-openvz-support.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0007-no-runlog.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0008-fix-promise-evaluation.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0009-dont-duplicate-text-blocks.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0010-support-large-int.patch
-	$(PATCH) -d ./cfengine-source -p1 < ./patches/cfengine/0011-cfserverd_understands_SIGHUP.patch
+	for PATCHNAME in patches/cfengine/*.patch; do echo "Applying $$PATCHNAME..."; $(PATCH) -d ./cfengine-source -p1 < $$PATCHNAME; done
 
 	# Bootstrap the package using autogen before compilation
 	cd cfengine-source && NO_CONFIGURE=1 ./autogen.sh
@@ -76,6 +67,10 @@ localdepends: ./initial-promises ./detect_os.sh ./files ./fusioninventory-agent 
 ./initial-promises: ./rudder-sources
 	rm -rf ./initial-promises/
 	cp -a ./rudder-sources/rudder-techniques/initial-promises/node-server/ ./initial-promises
+
+./rudder-agent-utilities: ./rudder-sources
+	rm -rf ./rudder-agent-utilities/
+	cp -a ./rudder-sources/rudder-agent/ ./rudder-agent-utilities
 
 # Needed for perl-prepare.sh
 ./detect_os.sh: ./rudder-sources
@@ -107,8 +102,6 @@ localdepends: ./initial-promises ./detect_os.sh ./files ./fusioninventory-agent 
 	$(WGET) -O ./files/Compress-Raw-Bzip2-2.027.tar.gz http://www.normation.com/tarball/Compress-Raw-Bzip2-2.027.tar.gz
 	#Original URL: http://www.cpan.org/modules/by-module/Compress/Compress-Raw-Zlib-2.027.tar.gz
 	$(WGET) -O ./files/Compress-Raw-Zlib-2.027.tar.gz http://www.normation.com/tarball/Compress-Raw-Zlib-2.027.tar.gz
-	#Original URL: http://www.cpan.org/modules/by-module/Crypt/Crypt-SSLeay-0.57.tar.gz
-	$(WGET) -O ./files/Crypt-SSLeay-0.57.tar.gz http://www.normation.com/tarball/Crypt-SSLeay-0.57.tar.gz
 	#Original URL: http://www.cpan.org/modules/by-module/Digest/Digest-MD5-2.39.tar.gz
 	$(WGET) -O ./files/Digest-MD5-2.39.tar.gz http://www.normation.com/tarball/Digest-MD5-2.39.tar.gz
 	#Original URL: http://www.cpan.org/modules/by-module/HTML/HTML-Parser-3.65.tar.gz
@@ -117,8 +110,6 @@ localdepends: ./initial-promises ./detect_os.sh ./files ./fusioninventory-agent 
 	$(WGET) -O ./files/HTML-Tagset-3.20.tar.gz http://www.normation.com/tarball/HTML-Tagset-3.20.tar.gz
 	#Original URL: http://www.cpan.org/modules/by-module/IO/IO-Compress-2.027.tar.gz
 	$(WGET) -O ./files/IO-Compress-2.027.tar.gz http://www.normation.com/tarball/IO-Compress-2.027.tar.gz
-	#Original URL: http://www.cpan.org/modules/by-module/IO/IO-Socket-SSL-1.33.tar.gz
-	$(WGET) -O ./files/IO-Socket-SSL-1.33.tar.gz http://www.normation.com/tarball/IO-Socket-SSL-1.33.tar.gz
 	#Original URL: http://search.cpan.org/CPAN/authors/id/G/GA/GAAS/libwww-perl-5.836.tar.gz
 	$(WGET) -O ./files/libwww-perl-5.836.tar.gz http://www.normation.com/tarball/libwww-perl-5.836.tar.gz
 	#Orignal URL: http://www.cpan.org/modules/by-module/Net/Net-IP-1.25.tar.gz
@@ -170,6 +161,7 @@ localclean:
 	rm -rf ./cfengine-source
 	rm -rf ./lmdb-source
 	rm -rf ./initial-promises
+	rm -rf ./rudder-agent-utilities
 	rm -rf ./detect_os.sh
 	rm -f ../debian/rudder-agent.init
 	rm -f ../debian/rudder-agent.default
