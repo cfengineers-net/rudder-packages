@@ -166,9 +166,9 @@ sub check_and_fix_cfengine_processes {
 	}else{
 		my $mtime = (stat("${LAST_UPDATE_FILE}"))[9];
 		if($mtime <= (time() - 60 * $CHECK_INTERVAL)){
-    	print "WARNING: The file ${LAST_UPDATE_FILE} is older than ${CHECK_INTERVAL} minutes, the agent is probably stuck. Purging the CFEngine lock database...";
-    	clean_cf_lock_files();
-    	print " Done\n";
+			print "WARNING: The file ${LAST_UPDATE_FILE} is older than ${CHECK_INTERVAL} minutes, the agent is probably stuck. Purging the CFEngine lock database...";
+			clean_cf_lock_files();
+			print " Done\n";
 		}
 	}
   if( scalar @CF_PROCESS_RUNNING > 8){
@@ -205,22 +205,22 @@ sub check_and_fix_rudder_uuid {
 	my $LATEST_BACKUPED_UUID="";
 	# Generate a UUID if we don't have one yet
 	if(! -e ${UUID_FILE}){
-	  if(-d ${BACKUP_DIR}){
+		if(-d ${BACKUP_DIR}){
 			my @UUID_FILES = ();
 			open(LS,"ls -1tr ${BACKUP_DIR}uuid-*.hive |");
 			@UUID_FILES = <LS>;	
 			chomp(@UUID_FILES);
 			close(LS);
-    	my $LATEST_BACKUPED_UUID = $UUID_FILES[$#UUID_FILES];
+			my $LATEST_BACKUPED_UUID = $UUID_FILES[$#UUID_FILES];
 		}
-  	if(${LATEST_BACKUPED_UUID} =~/\S+/){
-    	print "WARNING: The UUID of the node does not exist. The lastest backup (${LATEST_BACKUPED_UUID}) will be recovered...";
-    	system("${CP_A} ${LATEST_BACKUPED_UUID} ${UUID_FILE} >/dev/null 2>&1");
-    	print " Done\n";
-	  }else{
-    	print "WARNING: The UUID of the node does not exist and no backup exist. A new one will be generated...";
-	    system("uuidgen > ${UUID_FILE}");
-	    print " Done\n";
+		if(${LATEST_BACKUPED_UUID} =~/\S+/){
+			print "WARNING: The UUID of the node does not exist. The lastest backup (${LATEST_BACKUPED_UUID}) will be recovered...";
+			system("${CP_A} ${LATEST_BACKUPED_UUID} ${UUID_FILE} >/dev/null 2>&1");
+			print " Done\n";
+		}else{
+			print "WARNING: The UUID of the node does not exist and no backup exist. A new one will be generated...";
+			system("uuidgen > ${UUID_FILE}");
+			print " Done\n";
 		}
 	} else {
 		open(F,${UUID_FILE}) or die "$!\n";	
@@ -229,12 +229,12 @@ sub check_and_fix_rudder_uuid {
 		close(F);
 		my $CHECK_UUID = $UUID_FILE_LINES[0];
 		if($CHECK_UUID !~ /^([a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}|root)$/){
-    	print "INFO: Creating a new UUID for Rudder as the existing one is invalid...";
+			print "INFO: Creating a new UUID for Rudder as the existing one is invalid...";
 			my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
 			my $date = ($year + 1900)."".($mon + 1)."$mday";
-    	system("mkdir -p ${BACKUP_DIR}");
-    	system("cp -f ${UUID_FILE} ${BACKUP_DIR}/uuid-$date.hive");
-	    system("uuidgen > ${UUID_FILE}");
+			system("mkdir -p ${BACKUP_DIR}");
+			system("cp -f ${UUID_FILE} ${BACKUP_DIR}/uuid-$date.hive");
+			system("uuidgen > ${UUID_FILE}");
 			print " Done.\n";
 		}
 	}
@@ -247,21 +247,21 @@ sub check_and_fix_specific_rudder_agent_file {
 	my $LATEST_BACKUPED_FILES="";
 
 	if(! -e ${FILE_TO_RESTORE}) {
-	  if(-d ${BACKUP_DIR}) {
+		if(-d ${BACKUP_DIR}) {
 			my @BACKEDUP_FILES = ();
 			open(LS,"ls -1tr ${BACKUP_DIR}rudder-agent.${FILE_TYPE}-* |") or die "$!";
 			@BACKEDUP_FILES = <LS>;	
 			chomp(@BACKEDUP_FILES);
 			close(LS);
-    	my $LATEST_BACKUPED_UUID = $BACKEDUP_FILES[$#BACKEDUP_FILES];
+			my $LATEST_BACKUPED_UUID = $BACKEDUP_FILES[$#BACKEDUP_FILES];
 		}
-	  if(${LATEST_BACKUPED_FILES} =~/\S+/){
-	    print "WARNING: The file ${FILE_TO_RESTORE} does not exist. The lastest backup (${LATEST_BACKUPED_FILES}) will be recovered...";
-	    system("${CP_A} ${LATEST_BACKUPED_FILES} ${FILE_TO_RESTORE} >/dev/null 2>&1");
-	    print " Done\n";
-	  }else{
-	    print "ERROR: The file ${FILE_TO_RESTORE} does not exist and no backup exist. Please reinstall the rudder-agent package\n";
-	  }
+		if(${LATEST_BACKUPED_FILES} =~/\S+/){
+			print "WARNING: The file ${FILE_TO_RESTORE} does not exist. The lastest backup (${LATEST_BACKUPED_FILES}) will be recovered...";
+			system("${CP_A} ${LATEST_BACKUPED_FILES} ${FILE_TO_RESTORE} >/dev/null 2>&1");
+			print " Done\n";
+		}else{
+			print "ERROR: The file ${FILE_TO_RESTORE} does not exist and no backup exist. Please reinstall the rudder-agent package\n";
+		}
 	}
 }
 
