@@ -93,25 +93,25 @@ sub clean_cf_lock_files {
 
 sub check_and_fix_cfengine_processes {
 
-  # Detect the correct ps tool to use
-  # Supported tools are ps, vzps, and the rudder supplied vzps.py
-  my $PS = "ps";
-  my $VZPS = "/bin/vzps";
-  my $RUDDERPS = "/opt/rudder/bin/vzps.py";
+	# Detect the correct ps tool to use
+	# Supported tools are ps, vzps, and the rudder supplied vzps.py
+	my $PS = "ps";
+	my $VZPS = "/bin/vzps";
+	my $RUDDERPS = "/opt/rudder/bin/vzps.py";
 
-  # Detect if we are a VZ host
-  if(-e "/proc/bc/0") {
-    if(-e ${VZPS}) { 
-      $PS = "${VZPS} -E 0";
-    }else{
-      $PS="${RUDDERPS} -E 0";
+	# Detect if we are a VZ host
+	if(-e "/proc/bc/0") {
+		if(-e ${VZPS}) { 
+			$PS = "${VZPS} -E 0";
+		}else{
+			$PS="${RUDDERPS} -E 0";
 		}
 	}
 
-  # If there are more than on cf-execd process, we must kill them
-  # A standard kill won't kill them, so the -9 is necessary to make sure they are stopped
-  # They will be restarted by the next check, if the disable file is not set
-  # List the cf-execd processes running (without the path, they can be run manually)
+	# If there are more than on cf-execd process, we must kill them
+	# A standard kill won't kill them, so the -9 is necessary to make sure they are stopped
+	# They will be restarted by the next check, if the disable file is not set
+	# List the cf-execd processes running (without the path, they can be run manually)
 	my @CF_EXECD_RUNNING = ();
 	open(PS,"${PS} ${PS_OPTIONS} |") or die "$!\n";
 	while(<PS>){
@@ -122,12 +122,12 @@ sub check_and_fix_cfengine_processes {
 	close(PS);
 
 	if(scalar @CF_EXECD_RUNNING > 1){
-    print "WARNING: Too many instance of CFEngine cf-execd processes running. Killing them...";
+		print "WARNING: Too many instance of CFEngine cf-execd processes running. Killing them...";
 		foreach(@CF_EXECD_RUNNING){
 			my @PS_LINE = split(/\s+/,$_);
 			kill('KILL',$PS_LINE[1]);
 		}
-    print " Done\n";
+		print " Done\n";
 	}
 
 	my @CF_PROCESS_RUNNING = ();
@@ -143,7 +143,7 @@ sub check_and_fix_cfengine_processes {
 		print "WARNING: No disable file detected and no CFEngine process neither. Relaunching CFEngine processes...";
 		system("${CFE_BIN_DIR}/cf-agent -f failsafe.cf >/dev/null 2>&1");
 		system("${CFE_BIN_DIR}/cf-agent >/dev/null 2>&1");
-    print " Done\n";
+		print " Done\n";
 	}
 
 	my $RUN_INTERVAL=5;
@@ -157,12 +157,13 @@ sub check_and_fix_cfengine_processes {
 		}
 		close(F);
 	}
-  my $CHECK_INTERVAL = ${RUN_INTERVAL} * 2;
-  if(! -e ${LAST_UPDATE_FILE} || -e ${CFE_DISABLE_FILE}) {
-    # Either the file ${LAST_UPDATE_FILE} is not yet present, and this node is
-    # probably not accepted yet, either the file ${CFE_DISABLE_FILE} is present, so
-    # the agent won't update the ${LAST_UPDATE_FILE}.
-    # In both case, do nothing
+
+	my $CHECK_INTERVAL = ${RUN_INTERVAL} * 2;
+	if(! -e ${LAST_UPDATE_FILE} || -e ${CFE_DISABLE_FILE}) {
+	# Either the file ${LAST_UPDATE_FILE} is not yet present, and this node is
+	# probably not accepted yet, either the file ${CFE_DISABLE_FILE} is present, so
+	# the agent won't update the ${LAST_UPDATE_FILE}.
+	# In both case, do nothing
 	}else{
 		my $mtime = (stat("${LAST_UPDATE_FILE}"))[9];
 		if($mtime <= (time() - 60 * $CHECK_INTERVAL)){
@@ -171,13 +172,13 @@ sub check_and_fix_cfengine_processes {
 			print " Done\n";
 		}
 	}
-  if( scalar @CF_PROCESS_RUNNING > 8){
-    print "WARNING: Too many instance of CFEngine processes running. Killing them, and purging the CFEngine lock database...";
+	if( scalar @CF_PROCESS_RUNNING > 8){
+		print "WARNING: Too many instance of CFEngine processes running. Killing them, and purging the CFEngine lock database...";
 		foreach(@CF_PROCESS_RUNNING){
 			my @PS_LINE = split(/\s+/,$_);
 			kill('KILL',$PS_LINE[1]);
 		}
-    if(${OS_FAMILY} eq "AIX") {
+		if(${OS_FAMILY} eq "AIX") {
 			system("/etc/init.d/rudder-agent forcestop > /dev/null 2>&1");
 		}
 		clean_cf_lock_files();
@@ -188,13 +189,13 @@ sub check_and_fix_cfengine_processes {
 
 # Check the size of the cf_lock file
 sub check_and_fix_cf_lock {
-  my $MAX_CF_LOCK_SIZE=10485760;
-  if(-e "${CFE_DIR}/state/cf_lock.${CFENGINE_DB_EXT}"){
+	my $MAX_CF_LOCK_SIZE=10485760;
+	if(-e "${CFE_DIR}/state/cf_lock.${CFENGINE_DB_EXT}"){
 		my $CF_LOCK_SIZE = (stat("${CFE_DIR}/state/cf_lock.${CFENGINE_DB_EXT}"))[7];
-    if(${CF_LOCK_SIZE} >= ${MAX_CF_LOCK_SIZE}){
-      print "WARNING: The file ${CFE_DIR}/state/cf_lock.${CFENGINE_DB_EXT} is too big (${CF_LOCK_SIZE} bytes), purging it...";
-      clean_cf_lock_files();
-      print " Done\n";
+		if(${CF_LOCK_SIZE} >= ${MAX_CF_LOCK_SIZE}){
+			print "WARNING: The file ${CFE_DIR}/state/cf_lock.${CFENGINE_DB_EXT} is too big (${CF_LOCK_SIZE} bytes), purging it...";
+			clean_cf_lock_files();
+			print " Done\n";
 		}
 	}
 }
