@@ -18,14 +18,12 @@
 
 .DEFAULT_GOAL := localdepends
 
-RUDDER_VERSION_TO_PACKAGE = 2.10.0
-CFENGINE_RELEASE = 3.5.3
+RUDDER_VERSION_TO_PACKAGE = 3.0.0~beta1
+CFENGINE_RELEASE = 3.6.3
 FUSION_RELEASE = 2.3.6
-TOKYOCABINET_RELEASE = 1.4.48
-PCRE_RELEASE = 8.35
-OPENSSL_RELEASE = 1.0.1g
-ZLIB_RELEASE = 1.2.8
-BZIP2_RELEASE = 1.0.6
+PCRE_RELEASE = 8.36
+OPENSSL_RELEASE = 0.9.8zc
+OPENLDAP_RELEASE = 2.4.40
 BUILD_DIR = ../build
 TMP_DIR := $(shell mktemp -dq /tmp/rudder.XXXXXX)
 WGET := $(if $(PROXY), http_proxy=$(PROXY) ftp_proxy=$(PROXY)) /usr/sfw/bin/wget -q
@@ -33,7 +31,7 @@ PATCH = /usr/bin/gpatch
 FIND = /opt/csw/bin/gfind
 TAR = /opt/csw/bin/gtar
 
-localdepends: $(BUILD_DIR) $(BUILD_DIR)/initial-promises $(BUILD_DIR)/files $(BUILD_DIR)/fusioninventory-agent $(BUILD_DIR)/zlib-source $(BUILD_DIR)/bzip2-source $(BUILD_DIR)/tokyocabinet-source $(BUILD_DIR)/pcre-source $(BUILD_DIR)/openssl-source $(BUILD_DIR)/cfengine-source
+localdepends: $(BUILD_DIR) $(BUILD_DIR)/initial-promises $(BUILD_DIR)/files $(BUILD_DIR)/fusioninventory-agent $(BUILD_DIR)/openldap-source $(BUILD_DIR)/pcre-source $(BUILD_DIR)/openssl-source $(BUILD_DIR)/cfengine-source
 	rm -rf $(TMP_DIR)
 
 $(BUILD_DIR):
@@ -41,23 +39,18 @@ $(BUILD_DIR):
 
 $(BUILD_DIR)/cfengine-source:
 	# Original URL: http://cfengine.com/source-code/download?file=cfengine-$(CFENGINE_RELEASE).tar.gz
-	$(WGET) -O $(TMP_DIR)/cfengine.tgz http://www.normation.com/tarball/cfengine-$(CFENGINE_RELEASE).tar.gz
+#	$(WGET) -O $(TMP_DIR)/cfengine.tgz http://www.normation.com/tarball/cfengine-$(CFENGINE_RELEASE).tar.gz
+	$(WGET) -O $(TMP_DIR)/cfengine.tgz http://s3.amazonaws.com/cfengine.package-repos/tarballs/cfengine-$(CFENGINE_RELEASE).tar.gz
 	$(TAR) xzf $(TMP_DIR)/cfengine.tgz -C $(TMP_DIR)
 	mv $(TMP_DIR)/cfengine-$(CFENGINE_RELEASE) $(BUILD_DIR)/cfengine-source
-	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0001-add-support-for-openvz.patch
-	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0002-cfengine-report-on-package-removal.patch
-	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0003-dont-remove-blank-line-in-templates.patch
-	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0004-partially-revert-a-change-intended-to-alter-the-log.patch
-	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0005-tiny-optimization-in-safe-open.patch
-	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0006-fix-failure-to-open-paths-ending-in-a-slash.patch
-	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0007-fix-incorrect-return-value-for-empty-string-in-safe.patch
-	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0008-make-safe-open-treat-trailing-slashes-like-open.patch
-
-$(BUILD_DIR)/tokyocabinet-source:
-	# Original URL: http://fallabs.com/tokyocabinet/tokyocabinet-${TOKYOCABINET_RELEASE}.tar.gz
-	$(WGET) -O $(TMP_DIR)/tokyocabinet.tgz http://www.normation.com/tarball/tokyocabinet-${TOKYOCABINET_RELEASE}.tar.gz
-	$(TAR) xzf $(TMP_DIR)/tokyocabinet.tgz -C $(TMP_DIR)
-	mv $(TMP_DIR)/tokyocabinet-$(TOKYOCABINET_RELEASE) $(BUILD_DIR)/tokyocabinet-source
+#	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0001-add-support-for-openvz.patch
+#	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0002-cfengine-report-on-package-removal.patch
+#	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0003-dont-remove-blank-line-in-templates.patch
+#	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0004-partially-revert-a-change-intended-to-alter-the-log.patch
+#	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0005-tiny-optimization-in-safe-open.patch
+#	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0006-fix-failure-to-open-paths-ending-in-a-slash.patch
+#	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0007-fix-incorrect-return-value-for-empty-string-in-safe.patch
+#	$(PATCH) -d $(BUILD_DIR)/cfengine-source -p1 < ../patches/cfengine/0008-make-safe-open-treat-trailing-slashes-like-open.patch
 
 $(BUILD_DIR)/pcre-source:
 	$(WGET) -O $(TMP_DIR)/pcre.tgz http://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-$(PCRE_RELEASE).tar.gz
@@ -70,17 +63,6 @@ $(BUILD_DIR)/openssl-source:
 	mv $(TMP_DIR)/openssl-$(OPENSSL_RELEASE) $(BUILD_DIR)/openssl-source
 #	$(PATCH) -d $(BUILD_DIR)/openssl-source -p1 < ../patches/openssl/0001-makefile-correct-ldflags.patch
 	
-
-$(BUILD_DIR)/zlib-source:
-	$(WGET) -O $(TMP_DIR)/zlib.tgz http://zlib.net/zlib-$(ZLIB_RELEASE).tar.gz
-	$(TAR) xzf $(TMP_DIR)/zlib.tgz -C $(TMP_DIR)
-	mv $(TMP_DIR)/zlib-$(ZLIB_RELEASE) $(BUILD_DIR)/zlib-source
-
-$(BUILD_DIR)/bzip2-source:
-	$(WGET) -O $(TMP_DIR)/bzip2.tgz http://www.bzip.org/1.0.6/bzip2-$(BZIP2_RELEASE).tar.gz
-	$(TAR) xzf $(TMP_DIR)/bzip2.tgz -C $(TMP_DIR)
-	mv $(TMP_DIR)/bzip2-$(BZIP2_RELEASE) $(BUILD_DIR)/bzip2-source
-#	$(PATCH) -d $(BUILD_DIR)/bzip2-source -p1 < ../patches/bzip2/0001-makefile-wrong-opts-for-solaris-ld.patch
 
 $(BUILD_DIR)/rudder-sources.tar.bz2:
 	$(WGET) -O $(BUILD_DIR)/rudder-sources.tar.bz2 http://www.rudder-project.org/archives/rudder-sources-${RUDDER_VERSION_TO_PACKAGE}.tar.bz2
@@ -154,6 +136,11 @@ $(BUILD_DIR)/rudder-agent.cron: $(BUILD_DIR)/rudder-sources
 	sed 's@\$${g.rudder_base}@/opt/rudder@g' -i $(BUILD_DIR)/rudder-agent.cron
 	sed  's@\\&\\&@\&\&@g' -i $(BUILD_DIR)/rudder-agent.cron
 	sed  's@\\&1@\&1@g' -i $(BUILD_DIR)/rudder-agent.cron
+
+$(BUILD_DIR)/openldap-source:
+	$(WGET) -O $(TMP_DIR)/openldap.tgz http://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-$(OPENLDAP_RELEASE).tgz
+	$(TAR) xzf $(TMP_DIR)/openldap.tgz -C $(TMP_DIR)
+	mv $(TMP_DIR)/openldap-$(OPENLDAP_RELEASE) $(BUILD_DIR)/openldap-source
 
 localclean:
 	rm -rf $(BUILD_DIR)/cfengine-source
