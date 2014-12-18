@@ -3,7 +3,7 @@
 RUDDERDIR=/opt/rudder
 RUDDERVARDIR=/var/rudder
 PATH=$RUDDERDIR/bin/:$PATH
-#export PATH
+export PATH
 
 # Ensure our PATH includes Rudder's bin dir (for uuidgen on AIX in particular)
 

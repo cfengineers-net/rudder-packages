@@ -1,8 +1,12 @@
 function package_prepare_rudder_files() {
 
-	for script in run-inventory check-rudder-agent; do
+	for script in run-inventory rudder-perl; do
 		$CP -a $SCRIPTDIR/../../SOURCES/$script $SPOOL_SRC/$PREFIX/bin
 	done
 	
+#	for script in check-rudder-agent uuidgen; do
+#		$CP -a $SCRIPTDIR/../files/common/$script $SPOOL_SRC/$PREFIX/bin
+#	done
+
 #	$CP -a $SCRIPTDIR/../build/rudder-sources/rudder-techniques/initial-promises $PREFIX/share
 }
