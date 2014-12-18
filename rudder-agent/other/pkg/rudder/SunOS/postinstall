@@ -9,6 +9,10 @@ export PATH
 
 CFRUDDER_FIRST_INSTALL=0
 
+if [ ! -f $RUDDERVARDIR/cfengine-community/ppkeys/localhost.priv ]; then
+  CFRUDDER_FIRST_INSTALL=1
+fi
+
 echo "Making sure that the permissions on the CFEngine key directory are correct..."
 if [ -d $RUDDERVARDIR/cfengine-community/ppkeys ]; then
 chmod 700 $RUDDERVARDIR/cfengine-community/ppkeys

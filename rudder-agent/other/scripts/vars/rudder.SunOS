@@ -43,9 +43,9 @@ PERL_VERSION="5.12.4";
 MODULES="Digest::MD5 Net::IP XML::SAX XML::Simple UNIVERSAL::require File::Which XML::TreePP"
 
 NAME="Rudder Agent"
-PKGNAME="NRMrudder-agent"
-VERSION="2.10.0"
-DESCRIPTION="Rudder agent. Packaged by for Normation by www.cfengineers.net <contact@cfengineers.net>"
+PKGNAME="CFNrudder-agent"
+VERSION="3.0.0"
+DESCRIPTION="Rudder agent by Normation SAS. Packaged by www.cfengineers.net <contact@cfengineers.net>"
 
 PRODUCT=rudder
 SPOOL=$PREFIX.spool
