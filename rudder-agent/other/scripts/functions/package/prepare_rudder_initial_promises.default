@@ -1,5 +1,8 @@
 function package_prepare_rudder_initial_promises() {
 	if [ ! -d $SPOOL_SRC/$PREFIX/share/initial-promises ]; then
 		$CP -a $SCRIPTDIR/../build/rudder-sources/rudder-techniques/initial-promises/node-server $SPOOL_SRC/$PREFIX/share/initial-promises
+		$PATCH -d $SPOOL_SRC/$PREFIX/share/initial-promises -p1 < $SCRIPTDIR/patches/SunOS/rudder/0001-fix-rudder-var-in-failsafe-for-solaris.patch
+		$PATCH -d $SPOOL_SRC/$PREFIX/share/initial-promises -p1 < $SCRIPTDIR/patches/SunOS/rudder/0002-fix-rudder-var-in-site-for-solaris.patch
+		$PATCH -d $SPOOL_SRC/$PREFIX/share/initial-promises -p1 < $SCRIPTDIR/patches/SunOS/rudder/0003-fix-whoami-in-addinformationstoinverntory-for-solaris.patch
 	fi
 }

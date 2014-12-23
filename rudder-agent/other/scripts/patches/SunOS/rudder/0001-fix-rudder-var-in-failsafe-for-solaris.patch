@@ -1,0 +1,14 @@
+--- a/failsafe.cf	Sun Nov 30 11:25:56 2014
++++ b/failsafe.cf	Tue Dec 23 16:17:12 2014
+@@ -47,10 +47,7 @@
+     !windows.!android::
+       "rudder_base"              string => "/opt/rudder";
+ 
+-    solaris::
+-      "rudder_var"               string => "/opt/rudder/var";
+-
+-    !windows.!solaris.!android::
++    !windows.!android::
+       "rudder_var"               string => "/var/rudder";
+ 
+     !windows::

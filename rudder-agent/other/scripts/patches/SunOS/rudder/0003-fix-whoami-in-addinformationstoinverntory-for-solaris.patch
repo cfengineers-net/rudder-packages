@@ -1,0 +1,19 @@
+--- a/inventory/1.0/fusionAgent.cf	Sun Nov 30 11:25:56 2014
++++ b/inventory/1.0/fusionAgent.cf	Tue Dec 23 16:18:52 2014
+@@ -364,10 +364,15 @@
+ 
+     !windows.!android::
+       "CFKEY" string => execresult("/bin/cat ${sys.workdir}/ppkeys/localhost.pub", "noshell");
+-      "USER" string => execresult("/usr/bin/whoami", "noshell");
+       "usersnumber" int =>  readstringarray("userslist","/etc/passwd","#[^\n]*",":",50,16000);
+       "users" slist => getindices("userslist");
+ 
++    !windows.!android.!(solaris.!sunos_5_11)::
++      "USER" string => execresult("/usr/bin/whoami", "noshell");
++
++    solaris.!sunos_5_11::
++      "USER" string => execresult("/usr/ucb/whoami", "noshell");
++
+     !windows::
+       "polserv_uuid"          string => readfile( "${g.rudder_var_tmp}/uuid.txt" , "50" );
+ 

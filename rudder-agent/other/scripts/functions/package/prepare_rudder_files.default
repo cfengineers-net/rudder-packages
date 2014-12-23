@@ -1,6 +1,6 @@
 function package_prepare_rudder_files() {
 
-	for script in run-inventory rudder-perl; do
+	for script in rudder-perl; do
 		$CP -a $SCRIPTDIR/../../SOURCES/$script $SPOOL_SRC/$PREFIX/bin
 	done
 	

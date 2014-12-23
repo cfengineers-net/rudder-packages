@@ -1,0 +1,14 @@
+--- a/common/1.0/site.cf	Sun Nov 30 11:25:56 2014
++++ b/common/1.0/site.cf	Tue Dec 23 16:17:45 2014
+@@ -38,10 +38,7 @@
+       "rudder_curl"                string => "/usr/bin/curl";
+       "rudder_rm"                  string => "/bin/rm";
+ 
+-    solaris::
+-      "rudder_var"                 string => "/opt/rudder/var";
+-
+-    !solaris.!windows.!android::
++    !windows.!android::
+       "rudder_var"                 string => "/var/rudder";
+ 
+     !windows::
