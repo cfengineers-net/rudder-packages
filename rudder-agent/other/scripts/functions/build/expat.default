@@ -1,0 +1,6 @@
+function build_expat() {
+	cd $BUILDDIR/expat-source
+	./configure --prefix=$PREFIX
+	$MAKE
+	$MAKE install
+}

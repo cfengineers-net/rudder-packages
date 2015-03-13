@@ -1,0 +1,4 @@
+function package_prepare_bins_nxlog() {
+	mkdir -p $SPOOL_SRC/$PREFIX/bin
+	$CP -a $PREFIX/bin/nxlog* $SPOOL_SRC/$PREFIX/bin	
+}

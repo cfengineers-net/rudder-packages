@@ -1,0 +1,6 @@
+function build_apr() {
+	cd $BUILDDIR/apr-source
+	./configure --prefix=$PREFIX
+	$MAKE
+	$MAKE install
+}

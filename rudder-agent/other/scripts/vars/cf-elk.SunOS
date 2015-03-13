@@ -1,0 +1,65 @@
+OBJECTS=(
+	"prepare"
+	"zlib"
+	"liblmdb"
+	"libiconv"
+	"libxml2"
+	"pcre"
+	"openssl" 
+	"cfengine"
+	"libuuid"
+	"expat"
+	"apr"
+	"nxlog-ce"
+)
+
+PACKAGE_OBJS=(
+	"prepare_libs_cfengine"
+	"prepare_bins_cfengine"
+	"prepare_share_common"
+	"prepare_bins_nxlog"
+	"prepare_libs_nxlog"
+	"build_pkg"
+	"clean"
+)
+
+SCRIPTDIR=$PWD
+BUILDDIR="$PWD/../build"
+
+VARDIR=/var/cfengine
+PREFIX=/opt/cf-elk
+CFE_WORKDIR=$VARDIR
+
+#export AR=/opt/csw/bin/gar
+
+CP=gcp
+MAKE=gmake
+PATCH=gpatch
+
+NAME="CF-ELK (CFEngine + NXLog for logstash + ElasticSearch)"
+PKGNAME="CFNcf-elk"
+VERSION="0.0.1"
+DESCRIPTION="Packaged by www.cfengineers.net <contact@cfengineers.net>"
+
+PRODUCT=cfengine
+SPOOL=$PREFIX.spool
+SPOOL_SRC=$SPOOL/src/$PRODUCT/$VERSION
+CFE_NAMING=`echo $OS | tr '[A-Z]' '[a-z]'`
+
+PCRECONFIG="$PREFIX/bin/pcre-config"
+APRCONFIG="$PREFIX/bin/apr-1-config"
+
+LOGO="
+
+  @ @@    @            @ @@    @
+ @@ @@ @@ @@          @@ @@ @@ @@
+ @@@@@@@@@@@  @@@@@@  @@@@@@@@@@@
+  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+             @      @
+            @        @
+            @  @  @  @
+            @        @
+             @      @
+              @    @
+              @    @
+               @@@@              "

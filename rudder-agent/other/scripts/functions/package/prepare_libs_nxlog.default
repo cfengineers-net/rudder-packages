@@ -1,0 +1,21 @@
+function package_prepare_libs_nxlog {
+	
+	(find $PREFIX/libexec/nxlog -name "*.so*" | xargs ldd && ldd $PREFIX/bin/nxlog) | \
+		awk '/=>/{print $3}' | sort -u  | grep $PREFIX | while read line; do
+		
+		dir=${line%/*}
+                lib=${line##*/}
+                lib=${lib%%.so*}
+		if [ ! -d $SPOOL_SRC/$dir ]; then
+	                mkdir -p $SPOOL_SRC/$dir
+		fi
+		if [ ! -e $SPOOL_SRC/$line ]; then
+	                $CP -a $dir/$lib.so* $SPOOL_SRC/$dir
+		fi
+                chmod 644 $SPOOL_SRC/$dir/*
+	done
+
+	$CP -a $PREFIX/libexec $SPOOL_SRC/$PREFIX
+	find $SPOOL_SRC/$PREFIX/libexec -name "*.a" -exec rm -rf {} \;
+	find $SPOOL_SRC/$PREFIX/libexec -name "*.la" -exec rm -rf {} \;
+}

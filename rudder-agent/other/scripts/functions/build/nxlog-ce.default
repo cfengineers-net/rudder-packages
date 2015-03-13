@@ -1,0 +1,7 @@
+function build_nxlog-ce() {
+	cd $BUILDDIR/nxlog-ce-source
+	export APRCONFIG PCRECONFIG
+	./configure --prefix=$PREFIX --disable-xm_perl
+	$MAKE
+	$MAKE install
+}
