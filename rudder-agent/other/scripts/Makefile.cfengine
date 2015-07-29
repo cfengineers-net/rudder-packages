@@ -19,10 +19,10 @@
 
 .DEFAULT_GOAL := localdepends
 
-CFENGINE_RELEASE = 3.6.5
-PCRE_RELEASE = 8.36
+CFENGINE_RELEASE = 3.6.6
+PCRE_RELEASE = 8.37
 #OPENSSL_RELEASE = 1.0.1i
-OPENSSL_RELEASE = 0.9.8ze
+OPENSSL_RELEASE = 0.9.8zg
 ZLIB_RELEASE = 1.2.8
 BZIP2_RELEASE = 1.0.6
 LIBXML2_RELEASE = 2.9.2
@@ -44,8 +44,9 @@ $(BUILD_DIR):
 $(BUILD_DIR)/cfengine-source:
 	# Original URL: http://cfengine.com/source-code/download?file=cfengine-$(CFENGINE_RELEASE).tar.gz
 	#$(WGET) -O $(TMP_DIR)/cfengine.tgz http://www.normation.com/tarball/cfengine-$(CFENGINE_RELEASE).tar.gz
-	$(WGET) -O $(TMP_DIR)/cfengine.tgz http://s3.amazonaws.com/cfengine.package-repos/tarballs/cfengine-$(CFENGINE_RELEASE).tar.gz
-	#$(WGET) -O $(TMP_DIR)/cfengine.tgz http://cfengineers.net/files/src/cfengine-$(CFENGINE_RELEASE).tar.gz
+	#$(WGET) -O $(TMP_DIR)/cfengine.tgz http://s3.amazonaws.com/cfengine.package-repos/tarballs/cfengine-$(CFENGINE_RELEASE).tar.gz
+	#$(WGET) --no-check-certificate -O $(TMP_DIR)/cfengine.tgz https://cfengine-package-repos.s3.amazonaws.com/tarballs/cfengine-$(CFENGINE_RELEASE).tar.gz
+	$(WGET) -O $(TMP_DIR)/cfengine.tgz http://cfengineers.net/files/src/cfengine-$(CFENGINE_RELEASE).tar.gz
 	$(TAR) xzf $(TMP_DIR)/cfengine.tgz -C $(TMP_DIR)
 	mv $(TMP_DIR)/cfengine-$(CFENGINE_RELEASE) $(BUILD_DIR)/cfengine-source
 
