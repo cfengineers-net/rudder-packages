@@ -19,7 +19,7 @@
 
 .DEFAULT_GOAL := localdepends
 
-CFENGINE_RELEASE = 3.6.6
+CFENGINE_RELEASE = 3.7.0
 PCRE_RELEASE = 8.37
 #OPENSSL_RELEASE = 1.0.1i
 OPENSSL_RELEASE = 0.9.8zg
@@ -28,6 +28,7 @@ BZIP2_RELEASE = 1.0.6
 LIBXML2_RELEASE = 2.9.2
 LIBICONV_RELEASE = 1.14
 OPENLDAP_RELEASE = 2.4.40
+YAML_RELEASE = 0.1.5
 BUILD_DIR = ../build
 TMP_DIR := $(shell mktemp -dq /tmp/rudder.XXXXXX)
 WGET := $(if $(PROXY), http_proxy=$(PROXY) ftp_proxy=$(PROXY)) /usr/sfw/bin/wget -q
@@ -35,7 +36,7 @@ PATCH = /usr/bin/gpatch
 FIND = /opt/csw/bin/gfind
 TAR = /opt/csw/bin/gtar
 
-localdepends: $(BUILD_DIR) $(BUILD_DIR)/zlib-source $(BUILD_DIR)/bzip2-source $(BUILD_DIR)/openldap-source $(BUILD_DIR)/pcre-source $(BUILD_DIR)/openssl-source $(BUILD_DIR)/cfengine-source $(BUILD_DIR)/libxml2-source $(BUILD_DIR)/libiconv-source
+localdepends: $(BUILD_DIR) $(BUILD_DIR)/zlib-source $(BUILD_DIR)/bzip2-source $(BUILD_DIR)/openldap-source $(BUILD_DIR)/pcre-source $(BUILD_DIR)/openssl-source $(BUILD_DIR)/cfengine-source $(BUILD_DIR)/libxml2-source $(BUILD_DIR)/libiconv-source $(BUILD_DIR)/yaml-source
 	rm -rf $(TMP_DIR)
 
 $(BUILD_DIR):
@@ -90,6 +91,11 @@ $(BUILD_DIR)/openldap-source:
 	$(WGET) -O $(TMP_DIR)/openldap.tgz http://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-$(OPENLDAP_RELEASE).tgz
 	$(TAR) xzf $(TMP_DIR)/openldap.tgz -C $(TMP_DIR)
 	mv $(TMP_DIR)/openldap-$(OPENLDAP_RELEASE) $(BUILD_DIR)/openldap-source
+
+$(BUILD_DIR)/yaml-source:
+	$(WGET) -O $(TMP_DIR)/yaml.tgz http://pyyaml.org/download/libyaml/yaml-$(YAML_RELEASE).tar.gz
+	$(TAR) xzf $(TMP_DIR)/yaml.tgz -C $(TMP_DIR)
+	mv $(TMP_DIR)/yaml-$(YAML_RELEASE) $(BUILD_DIR)/yaml-source
 
 veryclean:
 	rm -rf $(BUILD_DIR)/rudder-sources.tar.bz2

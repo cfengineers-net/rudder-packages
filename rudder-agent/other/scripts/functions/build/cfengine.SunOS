@@ -32,6 +32,12 @@ function build_cfengine() {
 		OPTS="$OPTS --without-postgresql"
 	fi
 
+	if [ -f $PREFIX/include/yaml.h ]; then
+		OPTS="$OPTS --with-yaml=$PREFIX"
+	else
+		OPTS="$OPTS --without-yaml"
+	fi
+
 	./configure --prefix=$PREFIX --with-openssl=$PREFIX \
 		--with-pcre=$PREFIX --with-workdir=$CFE_WORKDIR \
 		$OPTS

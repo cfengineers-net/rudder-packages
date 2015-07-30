@@ -1,0 +1,6 @@
+function build_yaml() {
+	cd $BUILDDIR/yaml-source
+	./configure --prefix=$PREFIX
+	$MAKE
+	$MAKE install
+}

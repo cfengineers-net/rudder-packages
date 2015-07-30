@@ -1,6 +1,7 @@
 OBJECTS=(
 	"prepare"
 	"zlib"
+	"yaml"
 	"liblmdb"
 	"libiconv"
 	"libxml2"
@@ -32,7 +33,7 @@ PATCH=gpatch
 
 NAME="CFEngine Community"
 PKGNAME="CFNcfengine-community"
-VERSION="3.6.6"
+VERSION="3.7.0"
 DESCRIPTION="CFEngine community (C) CFEngine AS 2008-. Packaged by www.cfengineers.net <contact@cfengineers.net>"
 
 PRODUCT=cfengine
