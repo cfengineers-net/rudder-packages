@@ -1,0 +1,19 @@
+--- yaml_private.h.old	2014-01-13 01:24:55.000000000 +0100
++++ yaml_private.h	2015-07-31 10:11:53.296471133 +0200
+@@ -19,6 +19,16 @@
+ #endif
+ #endif
+ 
++#ifndef PTRDIFF_MAX
++# if __WORDSIZE == 64
++# define PTRDIFF_MIN (-9223372036854775807L-1)
++# define PTRDIFF_MAX (9223372036854775807L)
++# else
++# define PTRDIFF_MIN (-2147483647-1)
++# define PTRDIFF_MAX (2147483647)
++# endif
++#endif
++
+ /*
+  * Memory management.
+  */

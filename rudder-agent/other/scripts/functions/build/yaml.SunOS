@@ -1,0 +1,13 @@
+function build_yaml() {
+	cd $BUILDDIR/yaml-source
+	./configure --prefix=$PREFIX
+	case $OS_RELEASE in
+		5.8)
+			cd src
+			$PATCH -p0 < $SCRIPTDIR/patches/SunOS/yaml/0001-fix-missing-define-on-solaris-8.patch
+			cd ..
+		;;
+	esac
+	$MAKE
+	$MAKE install
+}
