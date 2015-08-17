@@ -1,6 +1,7 @@
 OBJECTS=(
 	"prepare"
 	"zlib"
+	"yaml"
 	"liblmdb"
 	"libiconv"
 	"libxml2"

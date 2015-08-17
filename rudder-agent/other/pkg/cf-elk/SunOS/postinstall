@@ -1,0 +1,21 @@
+#!/bin/sh
+
+if [ -x /opt/cf-elk/bin/cf-key ]; then
+        /opt/cf-elk/bin/cf-key
+fi
+
+mkdir -p /var/cfengine/bin
+ln -s /opt/cf-elk/bin/cf-promises /var/cfengine/bin/cf-promises
+
+start=/etc/init.d/cf-elk
+
+if [ -f /etc/init.d/cf-elk ];then
+        for l in /etc/rc3.d/S97cf-elk /etc/rc0.d/K05cf-elk /etc/rc1.d/K05cf-elk \
+                /etc/rc2.d/K05cf-elk /etc/rcS.d/K05cf-elk; do
+                if [ ! -h $l ]; then
+                        /usr/bin/ln -s $start $l
+                fi
+        done
+fi
+
+exit 0
