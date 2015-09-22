@@ -33,7 +33,7 @@ PATCH=gpatch
 
 NAME="CFEngine Community"
 PKGNAME="CFNcfengine-community"
-VERSION="3.7.0"
+VERSION="3.7.1"
 DESCRIPTION="CFEngine community (C) CFEngine AS 2008-. Packaged by www.cfengineers.net <contact@cfengineers.net>"
 
 PRODUCT=cfengine
