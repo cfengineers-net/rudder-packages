@@ -1,0 +1,11 @@
+--- mdb.c 2014-01-15 02:12:48.000000000 +0100
++++ mdb.c 2014-04-14 16:41:23.575045403 +0200
+@@ -83,7 +83,7 @@
+ #if defined(__APPLE__) || defined (BSD)
+ # define MDB_USE_POSIX_SEM 1
+ # define MDB_FDATASYNC		fsync
+-#elif defined(ANDROID)
++#elif defined(ANDROID) || defined(__sun__)
+ # define MDB_FDATASYNC		fsync
+ #endif
+

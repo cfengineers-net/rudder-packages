@@ -1,6 +1,7 @@
 function build_liblmdb {
 	cd $BUILDDIR/openldap-source/libraries/liblmdb
-	$PATCH -p0 < $SCRIPTDIR/patches/SunOS/liblmdb/0001-apply-fixes-for-solaris.patch
+	$PATCH -p0 < $SCRIPTDIR/patches/SunOS/liblmdb/0001-correct-makefile-for-sunos.patch
+	$PATCH -p0 < $SCRIPTDIR/patches/SunOS/liblmdb/0002-fix-problem-with-undefined-fdatasync-on-solaris.patch
 	
 	$MAKE prefix=$PREFIX THREADS=-pthreads
 	mkdir -p $PREFIX/man/man1
