@@ -33,14 +33,21 @@ function build_cfengine() {
 	fi
 
 	if [ -f $PREFIX/include/yaml.h ]; then
-		OPTS="$OPTS --with-yaml=$PREFIX"
+		OPTS="$OPTS --with-libyaml=$PREFIX"
 	else
-		OPTS="$OPTS --without-yaml"
+		OPTS="$OPTS --without-libyaml"
+	fi
+
+	if [ -f $PREFIX/include/curl/curl.h ]; then
+		OPTS="$OPTS --with-libcurl=$PREFIX"
+	else
+		OPTS="$OPTS --without-libcurl"
 	fi
 
 	./configure --prefix=$PREFIX --with-openssl=$PREFIX \
 		--with-pcre=$PREFIX --with-workdir=$CFE_WORKDIR \
 		$OPTS
+
 	$MAKE
 	$MAKE install
 }

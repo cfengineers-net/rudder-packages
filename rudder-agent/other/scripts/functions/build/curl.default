@@ -1,0 +1,7 @@
+function build_curl() {
+	cd $BUILDDIR/curl-source
+	./configure --with-sysroot=$PREFIX --with-ssl=$PREFIX --with-zlib=$PREFIX --prefix=$PREFIX --disable-ldaps \
+		--disable-ldap --disable-telnet --without-libidn --without-winidn
+	$MAKE
+	$MAKE install
+}

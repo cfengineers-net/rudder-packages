@@ -4,4 +4,7 @@ function package_prepare_bins_cfengine() {
 	if [ -f $PREFIX/bin/tchmgr ]; then
 		$CP -a $PREFIX/bin/tchmgr $SPOOL_SRC/$PREFIX/bin
 	fi
+	if [ -f $PREFIX/bin/curl ]; then
+		$CP -a $PREFIX/bin/curl $SPOOL_SRC/$PREFIX/bin
+	fi
 }
