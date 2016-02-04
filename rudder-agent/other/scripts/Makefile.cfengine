@@ -19,9 +19,9 @@
 
 .DEFAULT_GOAL := localdepends
 
-CFENGINE_RELEASE = 3.8.0
+CFENGINE_RELEASE = 3.8.1
 PCRE_RELEASE = 8.37
-OPENSSL_RELEASE = 0.9.8zh
+OPENSSL_RELEASE = 1.0.2f
 ZLIB_RELEASE = 1.2.8
 BZIP2_RELEASE = 1.0.6
 LIBXML2_RELEASE = 2.9.2
@@ -100,7 +100,7 @@ $(BUILD_DIR)/yaml-source:
 
 $(BUILD_DIR)/curl-source:
 	#http://curl.haxx.se/download/curl-7.46.0.tar.gz
-	$(WGET) -O $(TMP_DIR)/curl.tgz http://curl.haxx.se/download/curl-$(CURL_RELEASE).tar.gz
+	$(WGET) --no-check-certificate -O $(TMP_DIR)/curl.tgz https://curl.haxx.se/download/curl-$(CURL_RELEASE).tar.gz
 	$(TAR) xzf $(TMP_DIR)/curl.tgz -C $(TMP_DIR)
 	mv $(TMP_DIR)/curl-$(CURL_RELEASE) $(BUILD_DIR)/curl-source
 
